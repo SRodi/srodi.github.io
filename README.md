@@ -45,6 +45,14 @@ $ bundle
 
 Please see the [theme's docs](https://github.com/cotes2020/jekyll-theme-chirpy#documentation).
 
+## Running Local Server
+
+You may want to preview the site contents before publishing, so just run it by:
+
+```bash
+bundle exec jekyll s
+```
+
 ## License
 
 This work is published under [MIT][mit] License.
