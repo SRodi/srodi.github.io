@@ -8,7 +8,7 @@ image:
   alt: "A robust approach to test Terraform modules"
 ---
 
-### Introduction
+## Introduction
 As part of a production grade Terraform deployment, testing plays an integral part. This tutorial will demonstrate how to write and effectively test a Terraform module before deploying to a production environment.
 
 ## Why testing Infrastructure as Code?
