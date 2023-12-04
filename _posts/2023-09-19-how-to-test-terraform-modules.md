@@ -3,7 +3,6 @@ title: "How to test Terraform modules: a simple tutorial using IBM Cloud provide
 date: 2023-09-19 09:00:00 +0100
 categories: [DevOps, IaC]
 tags: [terraform, ibmcloud, terratest, go, testing]     ## TAG names should always be lowercase
-author: srodi
 image:
   path: /assets/img/post/intro-image.JPG
   alt: "A robust approach to test Terraform modules"
