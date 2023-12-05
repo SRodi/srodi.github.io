@@ -13,7 +13,7 @@ Open Source development for large projects often requires building docker images
 
 One possible solution to avoid configuring authentication to the registry with the imagePullSecrets for each image is to deploy a local container registry which is accessible from both Kubernetes and host development machine.
 
-> This blog post is based on the trisberg's Gist [Using a Local Registry with Minikube](https://gist.github.com/trisberg/37c97b6cc53def9a3e38be6143786589) which includes all relevant steps. However, I decided to write a post since I encountered issues with Rancher Desktop. The aim of this post is to provide some additional context and references when required.
+> This blog post is based on trisberg's Gist [Using a Local Registry with Minikube](https://gist.github.com/trisberg/37c97b6cc53def9a3e38be6143786589) which includes all relevant steps. However, I decided to write a post since I encountered issues with Rancher Desktop. The aim of this post is to provide some additional context and references when required.
 {: .prompt-info }
 
 ## Requirements
