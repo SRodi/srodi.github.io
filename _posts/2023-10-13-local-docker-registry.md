@@ -9,11 +9,13 @@ image:
 ---
 
 ## Introduction
-Open Source development for large projects often requires building docker images and pushing images to a registry to allow for local testing in a Kubernetes environment.
+Cloud and Open Source development for large projects based on microservices' architecture, normally requires building docker images and pushing images to a registry to allow for local testing in a Kubernetes environment.
 
-One possible solution to avoid configuring authentication to the registry with the imagePullSecrets for each image is to deploy a local container registry which is accessible from both Kubernetes and host development machine.
+One possible solution to prevent networking overhead, and storing several development container images in a remote repository, is to deploy a local container registry which is accessible from both Kubernetes and host development machine. In addition, the set-up presented in this tutorial will not require configuring authentication to container image registry with the use [imagePullSecrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for each Pod deployed in the local Kubernetes cluster.
 
-> This blog post is based on trisberg's Gist [Using a Local Registry with Minikube](https://gist.github.com/trisberg/37c97b6cc53def9a3e38be6143786589) which includes all relevant steps. However, I decided to write a post since I encountered issues with Rancher Desktop. The aim of this post is to provide some additional context and references when required.
+A local image repository can improve velocity, since there is no real necessity to push Git commits and run CI/CD pipelines to build, push and deploy when the code is still in the very early stages of development, and not ready to be reviewed yet.
+
+> This blog post is based on [trisberg's Gist: Using a Local Registry with Minikube](https://gist.github.com/trisberg/37c97b6cc53def9a3e38be6143786589) which includes all relevant steps. However, I decided to write a post since I encountered issues with Rancher Desktop. The aim of this post is to provide some additional context and references when required. In addition, I provided an example on how to create a properly tagged image, push it to local registry and use the image in Kubernetes.
 {: .prompt-info }
 
 ## Requirements
@@ -38,7 +40,20 @@ This step uses Docker CLI to start a container which uses image `registry:2` fro
 docker run -d -p 5000:5000 --restart=always --volume ~/.registry/storage:/var/lib/registry registry:2
 ```
 
-On your host development machine edit the `/etc/hosts` file to add the name `registry.dev.svc.cluster.local` on the same line as `localhost` entry. Later we will create a Kubernetes Service and necessary host networking configuration so that name `registry.dev.svc.cluster.local` will resolve to the cluster IP of the Service. See [Kubernetes docs: DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+On your host development machine edit the `/etc/hosts` file to add the name `registry.dev.svc.cluster.local` on the same line as `localhost` entry. Your `/etc/hosts` file should look similar to this:
+
+```bash
+❯ cat /etc/hosts
+##
+# Host Database
+#
+# localhost is used to configure the loopback interface
+# when the system is booting.  Do not change this entry.
+##
+127.0.0.1	localhost registry.dev.svc.cluster.local
+```
+
+Later, we will create a Kubernetes Service and necessary host networking configuration so that name `registry.dev.svc.cluster.local` will resolve to the cluster IP of the Service. See [Kubernetes docs: DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
 
 Validate the container registry is running on the host development machine
 
@@ -95,9 +110,10 @@ export HOST_DEV_MACHINE_IP=172.16.1.1
 sudo ifconfig lo0 alias $HOST_DEV_MACHINE_IP
 ```
 
-When the host development machine is restarted, the alias will have to be recreated. This can be prevented by [creating a Launchd Job](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html).
+> When the host development machine is restarted, the alias will have to be recreated. This can be prevented by [creating a Launchd Job](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html).
+{: .prompt-warning }
 
-In addition, an entry needs to be added in `/etc/hosts` of Minikube VM. The entry will resolve registry name `registry.dev.svc.cluster.local` to the IP address `172.16.1.1` of the host, enabling Docker containers in Minikube to pull images from the local registry.
+In addition to the host development machine IP alias configuration, an entry needs to be added in `/etc/hosts` of Minikube VM. The entry will resolve registry name `registry.dev.svc.cluster.local` to the IP address `172.16.1.1` of the host, enabling Docker containers in Minikube to pull images from the local registry.
 
 ```bash
 minikube ssh "echo \"$HOST_DEV_MACHINE_IP       registry.dev.svc.cluster.local\" | sudo tee -a  /etc/hosts"
@@ -210,9 +226,10 @@ A use case for this local configuration can be Open Source development for large
 
 ## References
 
+* [Kubernetes docs: Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
 * [Using a Local Registry with Minikube](https://gist.github.com/trisberg/37c97b6cc53def9a3e38be6143786589)
 * [Edit Docker config in Rancher Desktop](https://github.com/rancher-sandbox/rancher-desktop/discussions/1477#discussioncomment-2106389)
-* macOS: [Creating a Launchd Job](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
+* [macOS: Creating a Launchd Job](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
 * [Docker Registry HTTP API V2 Specifications](https://distribution.github.io/distribution/spec/api/)
 * [official Minikube documentation](https://minikube.sigs.k8s.io/docs/start/)
-* Kubernetes docs: [DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+* [Kubernetes docs: DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
