@@ -4,7 +4,7 @@ date: 2023-10-13 09:00:00 +0100
 categories: [DevOps, Docker]
 tags: [docker, kubernetes, minikube] ## always lowercase !!
 image:
-  path: intro-image-1.png
+  path: /intro-image-1.png
   alt: "Local container registry for Kubernetes related development"
 ---
 
