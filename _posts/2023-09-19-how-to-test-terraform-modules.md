@@ -4,7 +4,7 @@ date: 2023-09-19 09:00:00 +0100
 categories: [DevOps, IaC]
 tags: [terraform, ibmcloud, terratest, go, testing]     ## TAG names should always be lowercase
 image:
-  path: /assets/img/post/intro-image.JPG
+  path: intro-image.JPG
   alt: "A robust approach to test Terraform modules"
 ---
 
