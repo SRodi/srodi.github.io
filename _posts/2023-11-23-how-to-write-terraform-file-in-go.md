@@ -22,6 +22,8 @@ flowchart TD
     C -->|deploy| F[Region 3]
 ```
 
+The code presented in this tutorial is found [here](https://github.com/SRodi/hclwrite-example)
+
 ## Problem
 Normally this can be done manually without any issues, but if the Terraform in question refers to numerous resources (in my case thousands of secrets stored in a remote Secrets Manager instance), automation is necessary to prevent human-errors, provide scalability, validation, and more.
 
@@ -262,9 +264,10 @@ _Terraform plan_
 ## Conclusions
 In this short tutorial we created a simple go application to generate Terraform code programmatically. In the example presented we generate nested maps of "fictional" secrets represented by random strings to show how multiple values can be generated in iterative loops, however, in reality and depending on the specific use case, it is required to implement a custom logic or use existing libraries to dynamically fetch real values that will be used to write Terraform resources and supporting variables and/or locals.
 
-In another post I will talk specifically about our use case and the awesome integration between [IBM CLoud Secrets Manager and IBM Cloud Kubernetes Services](https://cloud.ibm.com/docs/containers?topic=containers-secrets-mgr).
+In another post I will talk specifically about our use case and the awesome integration between [IBM Cloud Secrets Manager and IBM Cloud Kubernetes Services](https://cloud.ibm.com/docs/containers?topic=containers-secrets-mgr).
 
 ## References
+* [Tutorial code](https://github.com/SRodi/hclwrite-example)
 * [Hashicorp HCL main repo](https://github.com/hashicorp/hcl/)
 * [Go hclwrite package](https://pkg.go.dev/github.com/hashicorp/hcl/v2@v2.19.1/hclwrite)
 * [hclwrite example](https://github.com/hashicorp/hcl/blob/main/hclwrite/examples_test.go)
