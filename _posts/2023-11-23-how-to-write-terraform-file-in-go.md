@@ -5,7 +5,7 @@ categories: [IaC, Go]
 tags: [go, terraform, ibmcloud, secretsmanager, kubernetes] ## always lowercase !!
 mermaid: true
 image:
-  path: /how_to_create_terraform_files_with_go.png
+  path: /how_to_create_terraform_files_with_go.webp
   alt: "A programmatic and scalable approach to Terraform files creation"
 ---
 
