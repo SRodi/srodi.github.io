@@ -15,8 +15,8 @@ Recently, I worked on a project that required to write several Terraform definit
 The high-level flow is similar to this:
 ```mermaid
 flowchart TD
-    A[Values Source] -->|Get values| B(Aggregate\nvalues)
-    B --> C{Generate\nTerraform}
+    A[Values Source A] -->|Get values| C(Aggregate\nvalues)
+    B[Values Source B]  -->|Get values| C(Aggregate\nvalues)
     C -->|deploy| D[Region 1]
     C -->|deploy| E[Region 2]
     C -->|deploy| F[Region 3]
