@@ -14,6 +14,7 @@ As a postgraduate researcher in Computer Science, I was the leading author of a 
 
 My technical skills include expertise in IaC (Pulumi, Terraform), Go development, CI/CD tools (Travis, Tekton, Jenkins, GitHub Actions, GitLab runners), Docker, Kubernetes, Vagrant, Ansible, Linux operations, Bash scripting, databases (relational and NoSQL), FullStack development (NodeJS, ReactJS, SpringBoot, PostgreSQL, DynamoDB), and professional experience in Java and Python.
 
+<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="49adf6db-8593-4dd8-b51a-7d18d14dd8c7" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="//cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="bab0a05a-5d88-4e2a-8bbb-dcd575a8ff15" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="f62e1087-63a1-4ec5-99ae-3b40daf67b58" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="a3c4fa03-e39c-4d43-971f-ed9e5a6cdf56" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
