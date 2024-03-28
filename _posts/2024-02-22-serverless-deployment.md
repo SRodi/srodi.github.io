@@ -356,7 +356,7 @@ Add the following code to `.github/workflows/main.yml` under `jobs`:
         shell: bash
 ```
 
-### Step 6: GitHub Actions
+### Step 7: GitHub Actions
 The following prerequisites must be satisfied prior enabling automation with GitHub Actions:
 1. Create a DockerHub access token [see Docker docs: Create an access token](https://docs.docker.com/security/for-developers/access-tokens/#create-an-access-token)
 
