@@ -48,6 +48,8 @@ The steps involved are the following:
 4. Write the GitHub Actions CI pipeline to create Docker image and Push to registry
 5. Create script with Schematics helpers functions
 6. Write the GitHub Actions CI pipeline to create a Terraform plan job for Code Engine resources
+7. View GitHub Action jobs
+8. Deploy Serverless app via Schematics
 
 Schematics workspaces deliver Terraform as a service to automate the provisioning and configuration management of your IBM Cloud resources, and rapidly build, duplicate, and scale complex, multi-tiered cloud environments [see IBM Cloud docs](https://cloud.ibm.com/docs/schematics?topic=schematics-sc-workspaces).
 
@@ -354,21 +356,40 @@ Add the following code to `.github/workflows/main.yml` under `jobs`:
         shell: bash
 ```
 
-## GitHub Actions
-
-The following prerequisites must be satisfied prior enabling automation:
+### Step 6: GitHub Actions
+The following prerequisites must be satisfied prior enabling automation with GitHub Actions:
 1. Create a DockerHub access token [see Docker docs: Create an access token](https://docs.docker.com/security/for-developers/access-tokens/#create-an-access-token)
 
 2. Create `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets in your GitHub repository [see Docker docs: Get started with GitHub Actions](https://docs.docker.com/build/ci/github-actions/#step-one-create-the-repository)
 
 3. Create `IBM_CLOUD_API_KEY` secret in your GitHub repository
 
-With all the above correctly configured, you can now push your code to your remote repo on the `main` branch and the pipeline will be automatically executed.
+With all the above correctly configured, you can now push your code to your remote GitHub repository on the `main` branch and GitHub Actions jobs will be automatically executed.
 
-When code is pushed to `main`, you should see something similar to this once the GitHub action is completed.
+When code is pushed to `main`, access the GitHub action view to validate all jobs are completed.
 
 ![GitHub Action example](/serverless-gha.webp)
 _GitHub Action example_
+
+### Step 8: Deploy the app via Schematics
+In this final step we access IBM Cloud Schematics to apply the Terraform plan job that has been triggered by GitHub Actions. The Terraform plan job was saved on Schematics workspace and the details can be seen under the `jobs` tab in the main workspace menu.
+
+After analyzing the diff by expanding the plan job window, the job can be applied directly on the Schematics UI so that Code Engine resources defined with Terraform in step 3 are deployed on IBM Cloud.
+
+![Schematics example](/serverless-sch.webp)
+_Schematics example_
+
+Note the output of our Terraform apply is the `app_url`. You can test the Serverless deployment by accessing the URL on the browser or sending a curl request via the terminal:
+
+```sh
+❯ curl https://api.eu-gb.codeengine.cloud.ibm.com/v2/projects/4131b8cb-2054-400e-a327-8f1dd41c14e6/apps/ce-serverless-app
+Here is a simple web-server!%
+```
+
+As you can see, the response is the same as the one received in step 1 and step 2 when we tested the app locally by running the go application and Docker container locally. However, this time the app is running in IBM Cloud as a Serverless application on Code Engine! 🚀 
+
+> Note: The above URL is no longer working, as I have destroyed all resources after testing.
+{: .prompt-info }
 
 ## Conclusions
 In this quick tutorial we created a very simple framework to support the full lifecycle of a serverless application on IBM Cloud Schematics using Terraform, Go, GitHub Actions, Schematics and some supporting Bash scripts.
