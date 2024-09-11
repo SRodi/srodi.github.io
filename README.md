@@ -62,3 +62,7 @@ This work is published under [MIT][mit] License.
 [use-template]: https://github.com/cotes2020/chirpy-starter/generate
 [CD]: https://en.wikipedia.org/wiki/Continuous_deployment
 [mit]: https://github.com/cotes2020/chirpy-starter/blob/master/LICENSE
+
+## Note
+
+For local development it might be useful to use [rbenv](https://github.com/rbenv/rbenv) to prevent using the default Ruby version that comes installed on MacOS.
