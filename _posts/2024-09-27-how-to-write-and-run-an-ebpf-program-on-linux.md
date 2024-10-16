@@ -1,16 +1,15 @@
 ---
-title: "How to write and run and eBPF program on Linux"
+title: "How to write and run an eBPF program on Linux"
 date: 2024-09-27 09:00:00 +0100
 categories: [eBPF]
 tags: [go, c, linux] ## always lowercase !!
 mermaid: true
 image:
-  path: /ebpf-001.webp
+  path: /ebpf.webp
   alt: "eBPF development 101"
 ---
 
-## Intro
-
+## Introduction
 [eBPF](https://ebpf.io/) (Extended Berkeley Packet Filter) is a powerful and flexible technology that allows for the execution of custom bytecode within the Linux kernel. Originally designed for packet filtering, eBPF has evolved into a general-purpose infrastructure for running sandboxed programs in the kernel space. These programs can be attached to various hooks, such as network events, system calls, and tracepoints, enabling developers to extend kernel functionality without modifying the kernel source code. This capability makes eBPF a versatile tool for performance monitoring, security enforcement, and network traffic analysis.
 
 ```mermaid
@@ -282,7 +281,7 @@ Here is a short video demo to show the eBPF program in action.
 
 ## Code Explanation
 
-The implementation for the eBPF program is found in [trace_file_delete.c](trace_file_delete.c) and the implementation for the user space application is in [main.go](main.go).
+The implementation for the eBPF program is found in `trace_file_delete.c` and the implementation for the user space application is in `main.go`.
 
 ## Trace File Delete eBPF Program
 
