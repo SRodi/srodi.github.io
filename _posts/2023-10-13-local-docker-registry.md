@@ -2,7 +2,7 @@
 title: "Configure a local Docker container image registry"
 date: 2023-10-13 09:00:00 +0100
 categories: [DevOps, Docker]
-tags: [docker, kubernetes, minikube] ## always lowercase !!
+tags: [docker, kubernetes, minikube, containers] ## always lowercase !!
 image:
   path: /intro-image-1.webp
   alt: "Local container registry for Kubernetes related development"

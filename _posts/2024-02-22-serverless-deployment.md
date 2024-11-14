@@ -2,7 +2,7 @@
 title: "End to End Serverless deployment on IBM Cloud"
 date: 2024-02-22 09:00:00 +0100
 categories: [IaC, Docker]
-tags: [go, terraform, ibmcloud, codeengine, docker, github] ## always lowercase !!
+tags: [go, terraform, ibmcloud, codeengine, docker, github, containers] ## always lowercase !!
 mermaid: true
 image:
   path: /serverless-poster.webp
