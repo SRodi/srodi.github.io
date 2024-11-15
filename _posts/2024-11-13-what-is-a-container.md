@@ -135,7 +135,7 @@ For those interested in exploring the complete implementation, the GitHub code r
 
 - [libcgroup-dev](https://github.com/libcgroup/libcgroup/blob/main/README)
 - [debootstrap](https://wiki.debian.org/Debootstrap)
-- [alpine-minirootfs](http://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/)
+- [alpine-minirootfs](https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/)
 - [cgroups](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
 - [netns](https://www.man7.org/linux/man-pages/man8/ip-netns.8.html)
 - [unshare](https://www.man7.org/linux/man-pages/man1/unshare.1.html)
