@@ -25,7 +25,7 @@ This is a very basic container and is not production-ready, but it demonstrates 
 ![container](/demo.gif)
 _Custom basic container demo_
 
-## Prerequisites <a name="head1234"></a>
+## Prerequisites
 - Linux `kernel version >= 5.4`
 - `libcgroup-dev` is a set of utilities for managing control groups (cgroups v2) in Linux.
 - `debootstrap` is a tool that installs a Debian-based Linux distribution into a subdirectory of another, already installed system
