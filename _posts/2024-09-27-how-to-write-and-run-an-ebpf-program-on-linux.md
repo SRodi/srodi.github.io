@@ -1,7 +1,7 @@
 ---
 title: "How to write and run an eBPF program on Linux"
 date: 2024-09-27 09:00:00 +0100
-categories: [eBPF]
+categories: [ebpf]
 tags: [go, c, linux] ## always lowercase !!
 mermaid: true
 image:

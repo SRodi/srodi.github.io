@@ -1,7 +1,7 @@
 ---
 title: "How to provisions a Google Cloud compute instance with support for nested virtualization"
 date: 2021-03-07 09:00:00 +0100
-categories: [DevOps]
+categories: [devops]
 tags: [gcp, bash] ## always lowercase !!
 image:
   path: /4.webp

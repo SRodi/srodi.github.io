@@ -1,7 +1,7 @@
 ---
 title: "Protect from DDoS attacks with eBPF XDP"
 date: 2024-11-29 09:00:00 +0100
-categories: [eBPF]
+categories: [ebpf]
 tags: [networking, c, linux, security] ## always lowercase !!
 mermaid: true
 image:

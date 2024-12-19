@@ -12,7 +12,7 @@ image:
 ## Introduction
 Kubernetes networking is a fundamental aspect of cloud-native systems, enabling seamless communication between pods, services, and external resources. This post, extracted from my postgraduate research [Performance Analysis of Zero Trust in Cloud Native Systems](https://sword.cit.ie/allthe/546/), delves into the core principles and mechanisms that underpin Kubernetes networking. By understanding these concepts, you can effectively design and manage robust, scalable, and secure network architectures within Kubernetes environments.
 
-## Plan
+## Kubernetes Networking Model
 Kubernetes networking model is based on a few fundamentals rules, where pods should be able to communicate with other pods without Network Address Translation (NAT), programs running on a node should communicate with any pod on the same node without using NAT, each pod has an Internet Protocol (IP) address that can be reached by any other pod in the cluster.[1] This model is referred to as a "flat networking model" and greatly supports microservices architectures by facilitating the communications between containers.
 
 ![kubernetes_components](/kubernetes_components.webp)
@@ -24,6 +24,7 @@ When creating a managed Kubernetes cluster in a PCP, nodes within the cluster ge
 ![network_ns_pod_create](/network_ns_pod_create.webp)
 _Figure 2: Linux network namespaces and pods_
 
+## CNI, Pods and Services
 When a pod is created, and the pod gets assigned to a node by the Kubernetes scheduler, the pod gets its own Linux network namespace on the node, the container network interface (CNI) assigns an IP address to the pod and attaches the pod to the container network, network packets can then flow to and from the pod. If multiple containers are part of the same pod, all containers will be part of the same network namespace. Linux has the ability to create several virtual device types and veth is one of them. veth are virtual ethernet devices which are created in pairs and are typically used to connect network namespaces. _Figure 2_ illustrates the final state of a pod creation, where the CNI creates a network namespace and assign an IP for the pod and then attaches the pod to the host network by creating a veth pair.
 
 Pods are ephemeral by nature, since Kubernetes regularly destroys and recreates them when pods configuration is updated, node pools are upgraded or nodes become unavailable. As a consequence, the IP address assigned to a pod is not reliable. Kubernetes uses another abstraction to provide a stable IP address and ports: services. Each Service has an IP address, called the ClusterIP, which is assigned from the cluster's VPC network. This IP address is stable and does not change during the lifetime of the service. Services use pod labels to group multiple pods in a logical unit and act as a load balancer for the set of pods that match a given label, this is done using a label selector in the service configuration.[2][3][1]
@@ -33,6 +34,7 @@ _Figure 3_ describes how services and pods communicate using labels and labels s
 ![services_and_labels](/services_and_labels.webp)
 _Figure 3: Kubernetes Services and labels_
 
+## kube-proxy
 The default networking configuration in Kubernetes avails of **kube-proxy** abstraction which leverages iptables. Iptables is a user space interface to set up, maintain and inspect the tables of IP packet filter (Netfilter) rules in the Linux kernel.[4] The role of kube-proxy is to assure clients can connect to services defined via Kubernetes API so that connection to the service IP and port is redirected to a backing pod. If more than one pod is backing a service, the kube-proxy performs load balancing across those pods.[3] A kube-proxy runs on each node as a static pod and is not an actual proxy, its function is to update iptables rules to redirect network packets to pods.[2]
 
 ![packets-svc-kube-proxy](/packets-svc-kube-proxy.webp)

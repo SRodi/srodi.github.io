@@ -1,7 +1,7 @@
 ---
 title: "End to End Serverless deployment on IBM Cloud"
 date: 2024-02-22 09:00:00 +0100
-categories: [IaC, Docker]
+categories: [iac, docker]
 tags: [go, terraform, ibmcloud, codeengine, docker, github, containers] ## always lowercase !!
 mermaid: true
 image:
