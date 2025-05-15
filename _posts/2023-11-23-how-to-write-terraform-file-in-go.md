@@ -1,8 +1,8 @@
 ---
 title: "How to write Terraform files with Go"
 date: 2023-11-23 09:00:00 +0100
-categories: [iac, go]
-tags: [go, terraform, hcl, hclwrite, ibmcloud, secretsmanager, kubernetes] ## always lowercase !!
+categories: [devops]
+tags: [iac, go, terraform, hcl, hclwrite, ibmcloud, secretsmanager, kubernetes] ## always lowercase !!
 mermaid: true
 image:
   path: /how_to_create_terraform_files_with_go.webp

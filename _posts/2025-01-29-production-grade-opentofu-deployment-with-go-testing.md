@@ -1,8 +1,8 @@
 ---
 title: "Production grade IaC deployments using go testing framework"
 date: 2025-01-29 07:00:00 +0100
-categories: [iac, go]
-tags: [opentofu, terraform, go, kubernetes, azure, aks] ## always lowercase !!
+categories: [devops]
+tags: [iac, opentofu, terraform, go, kubernetes, azure, aks] ## always lowercase !!
 mermaid: true
 image:
   path: /iac-go-test.webp

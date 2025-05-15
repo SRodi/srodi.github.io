@@ -1,7 +1,7 @@
 ---
 title: "Reduce Kubernetes API Server Load with DownwardAPI"
 date: 2025-05-15 07:00:00 +0100
-categories: [patterns, performance]
+categories: [kubernetes]
 tags: [kubernetes] ## always lowercase !!
 image:
   path: /downwardapi.webp
