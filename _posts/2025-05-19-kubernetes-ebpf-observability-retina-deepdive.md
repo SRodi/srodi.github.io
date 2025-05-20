@@ -1,12 +1,11 @@
 ---
-title: "Deep Dive into Retina Open-Source
-Kubernetes Network Observability"
+title: "Deep Dive into Retina Open-Source Kubernetes Network Observability"
 date: 2025-05-19 07:00:00 +0100
 categories: [kubernetes, ebpf]
-tags: [kubernetes, ebpf, prometheus, grafana, containers, go] ## always lowercase !!
+tags: [kubernetes, ebpf, prometheus, grafana, containers, go, c] ## always lowercase !!
 image:
-  path: /downwardapi.webp
-  alt: "Improve Kubernetes Scaling capabilities with DownwardAPI."
+  path: /retina-logo-poster.webp
+  alt: "eBPF distributed networking observability tool for Kubernetes."
 ---
 
 ## Introduction
@@ -17,10 +16,10 @@ Retina’s goal is to provide a centralized hub for monitoring application conne
 
 Key objectives of the Retina project include:
 
-* Unified Network Visibility – Leverage kernel-level instrumentation (eBPF on Linux, analogous mechanisms on Windows) to capture rich telemetry about pod-to-pod traffic, service connectivity, DNS queries, packet drops, and more, all without requiring application changes or sidecar proxies.
-* This gives actionable insights to cluster operators and developers about how microservices communicate and where issues might lie. Environment Agnosticism – Ensure the solution works with any Kubernetes platform: on Azure, AWS, Google Cloud, on-premises, or hybrid clouds. Retina is CNI-agnostic and supports multiple operating systems (Linux and Windows nodes) out-of-the-box.
-* This broad compatibility addresses the needs of enterprises running multi-cloud or heterogeneous clusters. DevOps & SecOps Use-Cases – Provide value for both operational performance monitoring (DevOps/SRE) and security/compliance monitoring (SecOps) use-cases. Retina enables on-demand troubleshooting (e.g. packet capture for a failing microservice) as well as continuous monitoring (e.g. metrics and alerts on dropped packets, DNS errors, or suspicious traffic spikes).
-* Open Source Collaboration – By open-sourcing Retina (under the MIT License), Microsoft invites the community to innovate and contribute plugins, integrations, and new capabilities. The project is intended to evolve through community feedback, with extensibility as a core principle (allowing users to add new elemetry sources or exporters easily). Ultimately, the goal is a robust, community-driven observability toolkit tailored for Kubernetes networking.
+* **Unified Network Visibility** – Leverage kernel-level instrumentation (eBPF on Linux, analogous mechanisms on Windows) to capture rich telemetry about pod-to-pod traffic, service connectivity, DNS queries, packet drops, and more, all without requiring application changes or sidecar proxies. This gives actionable insights to cluster operators and developers about how microservices communicate and where issues might lie.
+* **Environment Agnosticism** – Ensure the solution works with any Kubernetes platform: on Azure, AWS, Google Cloud, on-premises, or hybrid clouds. Retina is CNI-agnostic and supports multiple operating systems (Linux and Windows nodes) out-of-the-box. This broad compatibility addresses the needs of enterprises running multi-cloud or heterogeneous clusters.
+* **DevOps & SecOps Use-Cases** – Provide value for both operational performance monitoring (DevOps/SRE) and security/compliance monitoring (SecOps) use-cases. Retina enables on-demand troubleshooting (e.g. packet capture for a failing microservice) as well as continuous monitoring (e.g. metrics and alerts on dropped packets, DNS errors, or suspicious traffic spikes).
+* **Open Source Collaboration** – By open-sourcing Retina (under the MIT License), Microsoft invites the community to innovate and contribute plugins, integrations, and new capabilities. The project is intended to evolve through community feedback, with extensibility as a core principle (allowing users to add new elemetry sources or exporters easily). Ultimately, the goal is a robust, community-driven observability toolkit tailored for Kubernetes networking.
 
 Retina was first announced in early 2024 as part of Microsoft’s effort to embrace cloud-native open source. It shares similar goals with other eBPF-based observability tools (e.g. Pixie, Red Hat’s NetObserv) but is unique in its plug-in architecture and tight integration with the Cilium Hubble observability stack while remaining independent of any specific network stack. Next, we’ll dive into Retina’s architecture to see how it achieves these goals.
 
@@ -87,7 +86,23 @@ In summary, the architecture of Retina is a carefully layered system: **plugins 
 
 ## Deployment and Typical Usage Patterns
 
-Retina is built to be Kubernetes-native and is typically deployed as a DaemonSet (one Retina agent Pod per node) plus some optional supporting components. The project provides a Helm chart to simplify installation. A typical workflow to get started is:
+Retina is built to be Kubernetes-native and is typically deployed as a DaemonSet (one Retina agent Pod per node) plus some optional supporting components. The project provides a Helm chart to simplify installation.
+
+The following commanand is installing Retina with Standard control-plane and Basic metrics mode.
+
+```sh
+VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+helm upgrade --install retina oci://ghcr.io/microsoft/retina/charts/retina \
+    --version $VERSION \
+    --namespace kube-system \
+    --set image.tag=$VERSION \
+    --set operator.tag=$VERSION \
+    --set logLevel=info \
+    --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\]"
+```
+
+
+A typical workflow to get started is:
 
 1. **Installation via Helm**: You can install Retina from the official container registry (GHCR) using Helm. For example, one can fetch the latest version number and run
 `helm upgrade --install retina ghcr.io/microsoft/retina/charts/retina ...` with appropriate values. The Retina Helm chart will deploy the **retina-agent DaemonSet** in (for example)
@@ -119,14 +134,26 @@ recent captures or the health of Retina components on the nodes. More interestin
 
 #### Deployment Workflow
 
-Overall, the typical deployment workflow is: deploy the Retina DaemonSet, set up Prom/Grafana, and let it run continuously to monitor network health. When an anomaly is detected (e.g. an alert on high packet drops), use Retina’s CLI or CRDs to drill down – maybe switch to a more detailed metrics mode for specific pods, run a packet capture, or query flows via the Hubble CLI/UI if enabled. Retina fits naturally into Kubernetes workflows: it’s packaged and interacted with just like other Kubernetes resources (via kubectl, CRDs, Helm, etc.), which lowers the barrier for adoption among DevOps
-teams.
+Overall, the typical deployment workflow is:
+1. deploy the Retina DaemonSet
+2. set up Prom/Grafana, and let it run continuously to monitor network health
+
+When an anomaly is detected (e.g. an alert on high packet drops):
+1. use Retina’s CLI or CRDs to drill down
+2. maybe switch to a more detailed metrics mode for specific pods
+3. run a packet capture
+4. query flows via the Hubble CLI/UI if enabled
+
+Retina fits naturally into Kubernetes workflows: it’s packaged and interacted with just like other Kubernetes resources (via kubectl, CRDs, Helm, etc.), which lowers the barrier for adoption among DevOps teams.
 
 ## Supported Platforms and Integrations
 
-One of Retina’s selling points is **broad platform support** – it works across different Kubernetes distributions, cloud providers, and operating systems:
+One of Retina’s selling points is **broad platform support** – it works across different Kubernetes distributions, cloud providers, and operating systems
 
-* Kubernetes Distributions: Retina is distribution-agnostic. It can be deployed on managed services like Azure Kubernetes Service (AKS), Amazon EKS, Google GKE, or on self-managed
+![Retina Support](/retina-deep-dive.webp)
+_Overview of Retina support._
+
+* Kubernetes Distributions: Retina is **Kubernetes distribution-agnostic**. It can be deployed on managed services like Azure Kubernetes Service (AKS), Amazon EKS, Google GKE, or on self-managed
 clusters (kubeadm, Rancher, etc.). As long as the cluster is a fairly standard Kubernetes (v1.20+ for CRDs, etc.), Retina can be installed. It does not require any Azure-specific services to function (despite being built by Azure team) – it is not tied to Azure directly; users can run Retina in any Kubernetes instance, on-premises or in AWS, Azure, or GCP. This
 flexibility is important for hybrid-cloud scenarios and aligns with the multi-cloud goal.
 
@@ -137,11 +164,13 @@ blind spots.
 * **CNI / Network Stack**: Retina works with any CNI plugin or Kubernetes network implementation. Whether your cluster is using Kubenet, Azure CNI, Calico, Flannel, Cilium, WeaveNet, or others, Retina focuses on capturing traffic at the kernel level, so it doesn’t depend on or interfere with
 the CNI’s own components. For example, in a Cilium cluster you could actually use either Cilium’s built-in Hubble or Retina (though you likely wouldn’t run both simultaneously in production to avoid redundant overhead). In a cluster using Azure’s native networking or Calico, Retina steps in to provide the observability that those CNIs lack natively, all without needing any configuration specific to that CNI. This CNI-agnostic approach is a deliberate design to make Retina a drop-in addition to any Kubernetes environment.
 
-* Cloud Integration: While Retina runs on any cloud, it provides specific integration points for popular cloud monitoring services. Notably, it can export metrics to Azure Monitor and Azure Log Analytics, which is useful on AKS. In fact, Azure Monitor’s managed Prometheus can scrape Retina metrics, and Azure provides pre-built Grafana dashboards for Retina/Hubble as part of its “Advanced Networking” offerings. Outside of Azure, you could integrate Retina with AWS CloudWatch Container Insights or GCP’s Stackdriver by forwarding metrics, though the primary method in multi-cloud setups is to use Prometheus as a common denominator.
+* **Cloud Integration**: While Retina runs on any cloud, it provides specific integration points for popular cloud monitoring services. Notably, it can export metrics to Azure Monitor and Azure Log Analytics, which is useful on AKS. In fact, Azure Monitor’s managed Prometheus can scrape Retina metrics, and Azure provides pre-built Grafana dashboards for Retina/Hubble as part of its “Advanced Networking” offerings. Outside of Azure, you could integrate Retina with AWS CloudWatch Container Insights or GCP’s Stackdriver by forwarding metrics, though the primary method in multi-cloud setups is to use Prometheus as a common denominator.
 
 * **Observability Stacks**: Retina was built to play well with existing observability tools:
   1. **Prometheus & Grafana**: As mentioned, all metrics are exposed in Prometheus format. There are Grafana dashboards and PromQL queries available to visualize Retina metrics (for example, dashboards to show a heatmap of packet drops by node, or top 10 services by egress traffic). This allows teams to incorporate network observability into their existing monitoring dashboards, alongside CPU/memory and application metrics.
   2. **Cilium Hubble**: Retina can feed into Hubble – effectively acting as “Hubble for everyone.” If you enable Hubble mode, you can use the Hubble CLI ( `hubble observe ...` ) to query flows, or spin up the Hubble UI to get a live map of communications in your cluster. This is a powerful integration because Hubble provides a user-friendly way to explore network data (e.g. a UI graph of services and their connections, and the ability to drill into specific flow details). **Previously, Hubble’s benefits were mostly limited to clusters running Cilium as the CNI** – Retina breaks that limitation. In non-Cilium clusters, Retina + Hubble give you similar insight without a full Cilium deployment. Many users will appreciate this, as the learning curve for Hubble’s interface is lower than parsing raw metrics or logs.
+  ![Hubble CLI](/hubble-cli.webp)
+_An example of Hubble CLI accessible via Retina deployed with Hubble control plane._
   3. **Other Exporters**: Retina’s telemetry can be sent to “other vendors” as well . For example, it could push metrics to a third-party APM solution if configured. The plugin architecture also suggests that communities could create exporters for systems like Datadog or New Relic by consuming the flow data and reformatting it. The documentation hints at multiple storage options for telemetry – so far, Prometheus and Azure Monitor are explicitly mentioned, but others can be plugged in.
 
 To sum up, Retina fits into the ecosystem as a **versatile component**: it doesn’t replace your monitoring stack but rather enhances it with network-specific data. You deploy it alongside your existing tools. It’s supported on a wide range of infrastructure, reflecting the reality that large organizations run many flavors of Kubernetes. Whether you run all Linux on Azure, or a hybrid Linux/Windows cluster on-prem, Retina is intended to “just work” and deliver a consistent set of insights. Its integration with Hubble further allows it to leverage a popular open-source UI and CLI, avoiding the need to reinvent those aspects.
@@ -151,12 +180,6 @@ To sum up, Retina fits into the ecosystem as a **versatile component**: it doesn
 Retina’s value becomes most clear when examining common scenarios that DevOps, SREs, or network engineers face. Here are a few real-world use cases where Retina provides high value, by simplifying or accelerating what used to be painful processes:
 
 * **Debugging Pod Connectivity Issues**: Scenario: Suddenly, two services that used to communicate (microservice A calling B) can no longer reach each other. Perhaps after a network policy change or an unknown issue, connections time out. The traditional approach involves checking logs, verifying network policy YAMLs, and if needed, running `tcpdump` on each node that might host those pods – a time-consuming and technically challenging process (requires access to nodes and careful filtering). With Retina: This becomes much easier. An engineer can run a one-line **Retina capture** targeting pods A and B. Retina will automatically deploy capture jobs on all nodes where those pods reside and collect packet traces (for example, capturing any TCP SYN packets from A to B and seeing if they get replies). Within minutes, the engineer can retrieve a pcap file to identify if packets are being dropped (and if so, where and why – e.g. no SYN-ACK means the request never reached B, possibly a networking rule issue). Retina can also concurrently show **drop metrics** – for instance, the `retina_drop_reason` metric might show incrementing counts for a specific drop cause on a node, pointing directly to the problem (e.g. packets dropped due to an iptables rule or an MTU issue). By **automating distributed packet capture**, Retina dramatically shortens the feedback loop for network troubleshooting from hours to minutes.
-
-* **Debugging Pod Connectivity Issues**: Scenario: Suddenly, two services that used to communicate (microservice A calling B) can no longer reach each other. Perhaps after a network
-policy change or an unknown issue, connections time out. The traditional approach involves checking logs, verifying network policy YAMLs, and if needed, running `tcpdump` on each node
-that might host those pods – a time-consuming and technically challenging process (requires access to nodes and careful filtering). With Retina: This becomes much easier. An engineer
-can run a one-line **Retina capture** targeting pods A and B. Retina will automatically deploy capture jobs on all nodes where those pods reside and collect packet traces (for example,
-capturing any TCP SYN packets from A to B and seeing if they get replies). Within minutes, the engineer can retrieve a pcap file to identify if packets are being dropped (and if so, where and why – e.g. no SYN-ACK means the request never reached B, possibly a networking rule issue). Retina can also concurrently show **drop metrics** – for instance, the `retina_drop_reason` metric might show incrementing counts for a specific drop cause on a node, pointing directly to the problem (e.g. packets dropped due to an iptables rule or an MTU issue). By **automating distributed packet capture**, Retina dramatically shortens the feedback loop for network troubleshooting from hours to minutes.
 
 * **Continuous Monitoring of Network Health**: Scenario: You want to ensure the cluster’s networking is healthy over time and get alerted to any anomalies. This includes detecting things like: a spike in DNS failures (which could indicate an external DNS outage or CoreDNS issues), increased API server latency (which might impact all components), or a surge in dropped packets possibly due to misrouting or saturated links. With Retina: All these are exposed as **Prometheus metrics with Kubernetes context**. An operator can set up **alerts** – e.g., “Alert if any namespace sees >100 dropped packets in 5 minutes” or “Alert if `hubble_dns_error_total` > 0 for 10 minutes in the production namespace”. Grafana dashboards can continuously display these metrics per cluster, and one can correlate them with deployments or incidents. For example, Retina measures **DNS query/response counts and error codes**; if a rollout causes a spike in NXDOMAIN errors, you’d see it immediately and could investigate if an application is querying wrong DNS names. Likewise, Retina’s metric for **API server latency** allows cluster operators to notice if the control plane is under stress (perhaps etcd issues) as it starts affecting pods’ ability to communicate with the API server. Another example: you can track **namespace-level traffic** – Retina can tell you how much traffic each namespace is sending/receiving, and even alert if a normally quiet namespace suddenly starts transmitting large volumes (which could be a sign of a compromised pod exfiltrating data). All of this monitoring happens continuously, so you gain **ongoing visibility** into the network internals of your cluster, akin to having a cluster-wide packet watchdog that never sleeps.
 
@@ -188,8 +211,10 @@ Retina is an open-source project on GitHub (github.com/microsoft/retina) and wel
 
 * **Integration and Testing**: If you try Retina on a platform or with a setup others haven’t, you can contribute by reporting issues or ensuring Retina works in those environments. For instance, test it on the latest Kubernetes version and report compatibility, or integrate it with a new monitoring tool and share the steps.
 
-The **community model** around Retina appears to be friendly and growing. Since it’s a relatively new project (initial release in early 2024), contributors have a chance to significantly influence its direction. Microsoft’s team explicitly stated that by open-sourcing Retina, they “aim to share our knowledge and vision … and hope that Retina will evolve and grow through collaboration with other developers and
-organizations”. This indicates that the maintainers are eager to accept outside input and make Retina a broad community effort, not just a Microsoft-internal project.
+The **community model** around Retina appears to be friendly and growing. Since it’s a relatively new project (initial release in early 2024), contributors have a chance to significantly influence its direction. Microsoft’s team explicitly stated that by open-sourcing Retina, they “aim to share our knowledge and vision … and hope that Retina will evolve and grow through collaboration with other developers and organizations”. This indicates that the maintainers are eager to accept outside input and make Retina a broad community effort, not just a Microsoft-internal project.
+
+![Retina Commits March 2024 - May 2025](/retina-commits.webp)
+_Summary of Retina commits from GitHub repo._
 
 When contributing, be sure to follow the coding style (mostly Go conventions) and any guidelines in `CONTRIBUTING.md`. Also note that all code contributions undergo review and require passing automated tests (so writing tests for new features is encouraged).
 
@@ -227,8 +252,6 @@ In terms of roadmap transparency, contributors can look at the GitHub issues and
 
 ### Summary of Limitations
 
-Summary of Limitations: In bullet form, to recap:
-
 - Windows support: Only standard metrics, no flow
 logs; uses different tech (HNS/Pktmon) which is less feature-rich than eBPF.
 - Hubble dependency: Full
@@ -246,18 +269,18 @@ Despite these challenges, the roadmap for Retina is promising. The move toward a
 
 In conclusion, Retina already offers immense value by shedding light on Kubernetes networks, and with ongoing development, its few gaps are likely to close. Users and contributors can look forward to a more unified, feature-rich Retina – one that might become a de-facto standard for network observability in the cloud-native world. It’s an exciting project to watch (and participate in) as it evolves on the cutting edge of eBPF and cloud networking.
 
-# References
+## References
 
-* [What is Retina? | Retina](https://retina.sh/docs/Introduction/intro)
-* [Retina](http://retina.sh)
-* [Architecture | Retina](https://retina.sh/docs/Introduction/architecture)
-* [Metric Modes | Retina](https://retina.sh/docs/Metrics/modes/)
-* [Metrics | Retina](https://retina.sh/docs/Metrics/metrics-intro)
-* [GitHub - microsoft/retina: eBPF distributed networking observability tool for Kubernetes](https://github.com/microsoft/retina)
-* [Capture | Retina](https://retina.sh/docs/Concepts/CRDs/Capture)
-* [Contributing | Retina](https://retina.sh/docs/Contributing/overview)
+* [eBPF distributed networking observability tool for Kubernetes (GitHub - microsoft/retina)](https://github.com/microsoft/retina)
+* [What is Retina? (Retina Docs)](https://retina.sh/docs/Introduction/intro)
+* [Retina (Retina Docs)](http://retina.sh)
+* [Architecture (Retina Docs)](https://retina.sh/docs/Introduction/architecture)
+* [Metrics (Retina Docs)](https://retina.sh/docs/Metrics/metrics-intro)
+* [Standard Metric Modes (Retina Docs)](https://retina.sh/docs/Metrics/modes/)
+* [Capture (Retina Docs)](https://retina.sh/docs/Concepts/CRDs/Capture)
+* [Contributing (Retina Docs)](https://retina.sh/docs/Contributing/overview)
 * [Microsoft Azure Introduces Retina: a Cloud Native Container Networking Observability Platform - InfoQ](https://www.infoq.com/news/2024/04/microsoft-retina-observability/)
-* [A look at Retina on AKS | Teknews Blog](https://blog.teknews.cloud/aks/network/2024/06/29/A_look_at_Retina_on_AKS.html)
-* [Announcing Advanced Container Networking Services for your Azure Kubernetes Service clusters | Microsoft Azure Blog](https://azure.microsoft.com/en-us/blog/announcing-advanced-container-networking-services-for-your-azure-kubernetes-service-clusters/)
-* [Microsoft open sources Retina: A cloud-native container networking observability platform | Microsoft Azure Blog](https://azure.microsoft.com/en-us/blog/microsoft-open-sources-retina-a-cloud-native-container-networking-observability-platform/)
-* [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina | Microsoft Azure Blog](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361)
+* [A look at Retina on AKS (Teknews Blog)](https://blog.teknews.cloud/aks/network/2024/06/29/A_look_at_Retina_on_AKS.html)
+* [Announcing Advanced Container Networking Services for your Azure Kubernetes Service clusters (Microsoft Azure Blog)](https://azure.microsoft.com/en-us/blog/announcing-advanced-container-networking-services-for-your-azure-kubernetes-service-clusters/)
+* [Microsoft open sources Retina: A cloud-native container networking observability platform (Microsoft Azure Blog)](https://azure.microsoft.com/en-us/blog/microsoft-open-sources-retina-a-cloud-native-container-networking-observability-platform/)
+* [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina (Microsoft Azure Blog)](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361)
