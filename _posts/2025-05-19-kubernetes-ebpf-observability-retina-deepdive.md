@@ -38,7 +38,7 @@ At a high level, Retina’s architecture consists of a **kernel-space data colle
 
 * **Watchers and Kubernetes Context**: Alongside plugins, Retina runs *watchers* (via a Watcher Manager) to collect Kubernetes cluster metadata that’s essential for enriching the raw network data. For example, an **Endpoint Watcher** monitors the creation/deletion of pod network interfaces (veth pairs) on the node and emits events when pods come and go. A **Kubernetes API Watcher** monitors the API server’s advertised IP addresses. These watchers populate an in-memory **IP-to-object cache** that maps IP addresses to pod names, namespaces, node names, labels, etc. By maintaining this cache of Kubernetes objects keyed by IP, Retina can later join the network flow data with relevant context (e.g. “10.3.2.5 = Pod X in Namespace Y”) for more meaningful observability. This enrichment is done in real-time as flows are processed, and it enables cluster-wide views like “traffic by namespace” or “top talkers by service.” (Under the hood, to scale in large clusters, Retina can reduce the load on the API server by using a custom lightweight CRD called **RetinaEndpoint** that mirrors just the needed pod info. This avoids watching all Pod metadata and instead tracks only the minimal fields needed for network mapping, improving efficiency for big deployments.)
 
-### Control Plane Options (Hubble vs. Standard)
+### Control Plane
 
 A unique aspect of Retina is that it can operate in one of two **control plane** modes for processing and exporting the collected flow data. The choice can be configured at deployment and determines how the data flows after the initial capture by plugins.
 
@@ -69,6 +69,73 @@ metrics, which the Retina agent then exposes on a metrics HTTP endpoint (by defa
 _A simplified architecture of Retina Standard Control Plane, note the enricher is responsible to add Kubernetes metadata to flow object._
 
 The Standard mode is useful for clusters where you prefer a simpler deployment (just metrics to Prometheus) or need Windows node support. However, it offers slightly less detail than Hubble (for instance, Hubble’s flow logs and some advanced metrics may not be available in standard mode). In fact, the Retina maintainers have noted that Hubble mode provides additional features and metrics not in standard mode, and **the plan is to eventually deprecate the standard control plane in favor of Hubble** as the project matures. This suggests that in the future, we may see deeper integration and possibly Windows support via Hubble if eBPF for Windows or similar capabilities become available. For now, both modes coexist – ensuring all users have an option regardless of their environment.
+
+
+### Data Plane
+
+The data plane in Retina is responsible for the actual collection and processing of network telemetry data. It utilizes eBPF programs to capture and analyze network traffic at the kernel level, providing high-performance and low-overhead observability.
+
+1. **eBPF Programs**: Retina uses eBPF programs to hook into various points in the kernel's networking stack. These programs are written in a restricted C-like language and are compiled into eBPF bytecode, which is then loaded into the kernel. The eBPF programs are responsible for capturing network packets, extracting relevant metadata, and storing this information in eBPF maps.
+
+2. **eBPF Maps**: eBPF maps are key-value stores that are used to share data between eBPF programs and user-space applications. Retina uses these maps to store network telemetry data, such as packet headers, flow records, and connection tracking information. The data stored in these maps can be accessed and processed by user-space applications for further analysis and visualization.
+
+3. **Data Aggregation**: The data plane in Retina supports different levels of data aggregation, allowing users to control the granularity of the collected telemetry data. This can range from low-level packet captures to high-level flow records, depending on the use case and performance requirements.
+
+#### Plugins Model
+
+Retina's plugins model is designed to be highly extensible, allowing users to customize and extend the functionality of the observability platform. Plugins are responsible for processing the data collected by the data plane and exporting it to various storage and visualization backends.
+
+1. **Plugin Lifecycle**: The lifecycle of a Retina plugin can be summarized as follows:
+  * **Initialize**: During the initialization phase, the plugin sets up the necessary eBPF maps, sockets, and other resources required for data collection and processing.
+  * **Start**: In the start phase, the plugin begins reading data from the eBPF maps and arrays, processing this data, and sending it to the appropriate location based on the control plane configuration.
+
+2. **Plugin Interface**: Retina plugins implement a common interface, which defines the methods and data structures used for data collection and processing. This interface ensures that plugins can be easily integrated into the Retina framework and can work seamlessly with the data plane.
+
+3. **Data Export**: Depending on the control plane being used, the data processed by the plugins can be sent to various destinations. For example, it can be sent to a Retina Enricher for further processing or written to an external channel consumed by a Hubble observer. Plugins can also use syscalls or other API calls to interact with the kernel and collect additional telemetry data.
+
+4. **Extensibility**: Retina's plugins model is designed to be highly extensible, allowing users to develop custom plugins to address specific use cases. This extensibility is achieved through a well-defined plugin interface and a modular architecture that supports the integration of third-party plugins.
+
+Retina's BPF implementation leverages eBPF for distributed network observability in Kubernetes, focusing on non-intrusive data collection and a modular plugins architecture.
+
+#### BPF Implementation
+
+Retina uses eBPF probes attached to kernel hooks to monitor network activity without modifying applications or requiring sidecars. Key features:
+
+* **Dual-stack instrumentation**: Collects metrics from both Kubernetes API server interactions and kernel-level packet processing
+* **Low-overhead design**: Operates with <1% CPU/memory footprint per node through optimized BPF verifier configurations
+* **Windows compatibility**: Implements alternative data collection for Windows nodes while maintaining Linux eBPF core
+
+Retina's plugin architecture enables extensible data processing.
+
+1. **Pluggable BPF Programs**: Each plugin loads/unloads specific BPF probes dynamically
+2. **Shared Maps**: Uses BPF maps (hash, array) for cross-plugin data sharing
+3. **Conditional Attachment**: Plugins enable hooks only when needed (e.g., DNS monitoring activates on port 53)
+
+#### BPF Hook Points
+
+Retina attaches probes at critical networking stack layers:
+
+| Hook Point              | Layer            | Use Case                        |
+|-------------------------|------------------|----------------------------------|
+| XDP                     | Driver           | High-speed packet drops counting |
+| TC Ingress              | Network Stack    | Connection tracking & latency    |
+| TC Egress               | Network Stack    | Packet transmission metrics      |
+| socket/connect          | Application      | DNS resolution tracking          |
+| kprobe/tcp_v4_connect   | Kernel           | TCP connection establishment     |
+
+Key implementation details:
+
+* TC Hook Chaining: Uses TC_ACT_OK to preserve existing CNI chain integrations
+* CO-RE Compliance: Leverages libbpf's BPF CO-RE for cross-kernel compatibility
+* Per-Pod Filtering: Uses cgroup IDs to isolate metrics per workload
+
+The architecture enables granular observability while maintaining cloud-agnostic operation through its plugin-defined BPF attachment strategy.
+
+#### Integration with Control Plane
+
+Retina's data plane and plugins model are designed to work seamlessly with the control plane, which is responsible for managing the configuration and operation of the observability platform. The control plane provides a centralized hub for monitoring application health, network health, and security, and it integrates with various storage and visualization backends to provide a comprehensive observability solution.
+
+In summary, Retina's BPF implementation leverages the power of eBPF to provide a high-performance and low-overhead networking observability platform for Kubernetes environments. The data plane and plugins model are designed to be highly extensible, allowing users to customize and extend the functionality of the platform to address specific use cases.
 
 ### Architecture Design Priorities
 
