@@ -236,7 +236,7 @@ Retina delivers deep, actionable insight into Kubernetes networking, with a focu
 
 * [eBPF distributed networking observability tool for Kubernetes (GitHub - microsoft/retina)](https://github.com/microsoft/retina)
 * [What is Retina? (Retina Docs)](https://retina.sh/docs/Introduction/intro)
-* [Retina (Retina Docs)](http://retina.sh)
+* [Retina (Retina Docs)](https://retina.sh)
 * [Architecture (Retina Docs)](https://retina.sh/docs/Introduction/architecture)
 * [Metrics (Retina Docs)](https://retina.sh/docs/Metrics/metrics-intro)
 * [Standard Metric Modes (Retina Docs)](https://retina.sh/docs/Metrics/modes/)
