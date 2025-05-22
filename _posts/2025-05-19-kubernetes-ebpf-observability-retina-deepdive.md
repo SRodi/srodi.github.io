@@ -241,7 +241,7 @@ A typical workflow:
 5. **On-Demand Packet Captures**: Retina orchestrates distributed packet capture jobs for deep network debugging. Captures can be initiated via CLI or CRD, targeting specific pods/nodes, with results stored in cloud storage or PVCs for offline analysis. On Linux, eBPF pcap tracers are used; on Windows, pktmon is leveraged.
 6. **Trace and Shell (Advanced Debugging)**: The CLI offers experimental commands for tracing and interactive debugging, further streamlining troubleshooting.
 
-#### Deployment Workflow
+### Deployment Workflow
 
 The typical workflow is:
 
@@ -305,6 +305,7 @@ While Retina is powerful, we are transparent about current limitations and ongoi
 
 We are focused on:
 
+* Quality improvements, stability and performance.
 * Expanding plugins and metrics (e.g., L7 tracing, network policy violation metrics).
 * Enhancing CRD automation (e.g., scheduled captures, in-system alerts).
 * Supporting edge cases (IPv6, dual-stack).
@@ -314,11 +315,11 @@ Our roadmap is transparent, with issues and discussions tracked on GitHub. Micro
 
 ### Summary of Limitations
 
-- Windows: Only standard metrics, no flow logs; uses HNS/Pktmon, less feature-rich than eBPF.
-- Hubble dependency: Full functionality on Linux requires Hubble components; standard mode will be phased out.
-- Resource tuning: Users must configure metrics modes to avoid high Prometheus load in large environments.
-- Multi-tool conflicts: Caution when running alongside other eBPF tools.
-- Early-stage: Expect rapid changes and ongoing improvements.
+* Windows: Only standard metrics, no flow logs; uses HNS/Pktmon, less feature-rich than eBPF.
+* Hubble dependency: Full functionality on Linux requires Hubble components; standard mode will be phased out.
+* Resource tuning: Users must configure metrics modes to avoid high Prometheus load in large environments.
+* Multi-tool conflicts: Caution when running alongside other eBPF tools.
+* Early-stage: Expect rapid changes and ongoing improvements.
 
 ### Outlook
 
