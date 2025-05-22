@@ -89,11 +89,11 @@ Plugins dynamically load/unload BPF probes, use shared maps for cross-plugin dat
 
 | Hook Point              | Layer            | Use Case                        |
 |-------------------------|------------------|----------------------------------|
-| XDP                     | Driver           | High-speed packet drops counting |
-| TC Ingress              | Network Stack    | Connection tracking & latency    |
-| TC Egress               | Network Stack    | Packet transmission metrics      |
-| socket/connect          | Application      | DNS resolution tracking          |
-| kprobe/tcp_v4_connect   | Kernel           | TCP connection establishment     |
+| Socket filter BPF program on raw socket              | Link layer    | (packetforward) Monitor node traffic    |
+| TC clsact qdisc on ingress/egress of veth & default interface               | Linux traffic control    | (packetparser) Capture detailed flows |
+| kprobes/kretprobes/fexis      | Kernel           | (dropreason) Kernel network stack     |
+| Inspektor Gadget DNS tracer         | Network/Transport layer      | (dns) DNS resolution tracking          |
+| Inspektor Gadget TCP retransmission tracer      | Transport layer           | (tcpretrans) Detect TCP retransmissions     |
 
 Key implementation details:
 
@@ -108,6 +108,102 @@ This architecture enables granular, cloud-agnostic observability through plugin-
 Retina’s data plane and plugins are tightly integrated with the control plane, which manages configuration and operation. The control plane centralizes monitoring and integrates with various storage and visualization backends.
 
 In summary, Retina’s BPF implementation delivers high-performance, low-overhead observability for Kubernetes networking, with extensibility at its core.
+
+### Retina Plugins Detail
+
+Each plugin targets a specific aspect of networking or system events and can attach one or more eBPF programs at different attachments points in the kernel to collect telemetry. This design allows Retina to be extensible – new plugins with custom eBPF probes can be added for additional data sources. Some plugins rely on eBPF for data collection, while others use existing system counters or external tracer libraries.
+
+In the next sections we summarize all Retina plugins (as of Retina `v0.0.33`) with their eBPF attachment points, operating layer, usage, and other details.
+
+#### dropreason
+
+> **BPF Attachment**: `kprobe`/`kretprobe`/`fexit` on nf_hook_slow, nf_nat_inet_fn, __nf_conntrack_confirm, tcp_v4_connect, inet_csk_accept
+>
+> **Layer**: Kernel network stack (Netfilter hooks and TCP sockets)
+>
+> **Usage**: Intercepts packet drop events in the kernel (iptables rules, NAT failures, conntrack drops, failed TCP connect/accept) and counts dropped packets/bytes by reason and direction
+>
+> **Details**: Requires `CAP_SYS_ADMIN`. Multiple eBPF programs work in tandem to classify drop reasons. In advanced mode, enriches drop events with pod info and exports as flow records for per-pod metrics.
+
+#### packetforward
+
+> **BPF Attachment**: Socket filter BPF program attached to `raw socket` on host's primary interface
+>
+> **Layer**: Link layer (captures packets at the network interface via socket)
+>
+> **Usage**: Passively monitors all packets passing through the node's main interface, counting packets and bytes by direction. Provides node-level traffic volume metrics.
+>
+> **Details**: Requires `CAP_BPF`. Uses a classic eBPF socket filter program similar to tcpdump's capture mechanism. Metrics are reported at node level with no per-pod breakdown.
+
+#### linuxutil
+
+> **BPF Attachment**: None (no eBPF program; uses OS utilities)
+>
+> **Layer**: N/A (User-space stats collection)
+>
+> **Usage**: Gathers general host network stats from kernel counters – TCP/UDP socket statistics and interface statistics – by parsing /proc/net/netstat and using ethtool for NIC stats
+>
+> **Details**: Requires `CAP_BPF`. This plugin uses existing kernel data sources instead of custom BPF, reducing overhead. Basic/Advanced metrics are identical since data comes directly from system counters.
+
+#### dns
+
+> **BPF Attachment**: `Inspektor Gadget DNS tracer` (built on eBPF) tracking DNS socket events
+>
+> **Layer**: Network/Transport layer (DNS over UDP/TCP traffic)
+>
+> **Usage**: Monitors DNS queries and responses in real time, counting requests, responses, error codes, and other DNS metrics
+>
+> **Details**: Requires `CAP_SYS_ADMIN`. Leverages open-source Inspektor Gadget DNS gadget. In advanced mode, enriches DNS events with pod info and exports flows for per-pod DNS metrics.
+
+#### packetparser
+
+> **BPF Attachment**: `TC` (clsact qdisc) with BPF cls/filter programs on ingress and egress of pod veth interfaces and host's default interface
+>
+> **Layer**: Linux traffic control (OSI Layer 3/4)
+>
+> **Usage**: Captures every TCP/UDP packet to/from pods and the node, allowing detailed flow records. Used for on-demand deep packet inspection and flow export.
+>
+> **Details**: Requires `CAP_NET_ADMIN` and `CAP_SYS_ADMIN`. Attaches filters on both ingress and egress to capture traffic in both directions. Generates only advanced flows enriched with Kubernetes metadata.
+
+#### tcpretrans
+
+> **BPF Attachment**: `Inspektor Gadget TCP Retransmission` tracer (eBPF-based)
+>
+> **Layer**: Transport layer (TCP stack events)
+>
+> **Usage**: Detects and measures TCP retransmissions – packets that had to be re-sent due to loss or lack of ACK
+>
+> **Details**: Requires `CAP_SYS_ADMIN`. Internally uses Inspektor Gadget's logic. In advanced mode, retransmission events are converted into enriched flow records with pod info.
+
+#### ciliumEventObserver
+
+> **BPF Attachment**: None (relies on Cilium's existing eBPF programs)
+>
+> **Layer**: Varies (leverages Cilium's kernel hooks)
+>
+> **Usage**: Integrates with Cilium CNI: subscribes to the Cilium monitor socket to collect network flow events already generated by Cilium's eBPF programs
+>
+> **Details**: No elevated BPF capability needed. Avoids conflicts by consuming Cilium's output instead of attaching additional eBPF filters. Converts Cilium's events into Retina flow objects.
+
+#### hnsstats
+
+> **BPF Attachment**: None (uses Windows networking APIs)
+>
+> **Layer**: N/A (Windows OS networking stack)
+>
+> **Usage**: Collects network statistics on Windows nodes – TCP connection stats and packet counts for HNS and VFP
+>
+> **Details**: No eBPF usage. Interfaces with Windows networking subsystems to gather counters. Provides similar metrics to Linux plugins but in a Windows context.
+
+#### infiniband
+
+> **BPF Attachment**: None (uses sysfs interfaces)
+>
+> **Layer**: N/A (User-space, reads kernel sysfs)
+>
+> **Usage**: Gathers InfiniBand network interface statistics – Nvidia InfiniBand port counters and link debug status
+>
+> **Details**: Requires `CAP_BPF`. Does not load any eBPF program – relies on kernel-provided counters in sysfs. Extends Retina to support high-performance InfiniBand networks.
 
 ### Architecture Design Priorities
 
