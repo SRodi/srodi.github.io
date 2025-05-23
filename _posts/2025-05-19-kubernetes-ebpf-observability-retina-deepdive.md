@@ -91,7 +91,7 @@ Plugins dynamically load/unload BPF probes, use shared maps for cross-plugin dat
 |-------------------------|------------------|----------------------------------|
 | Socket filter BPF program on raw socket              | Link layer    | (packetforward) Monitor node traffic    |
 | TC clsact qdisc on ingress/egress of veth & default interface               | Linux traffic control    | (packetparser) Capture detailed flows |
-| kprobes/kretprobes/fexis      | Kernel           | (dropreason) Kernel network stack     |
+| kprobes/kretprobes/fexit      | Kernel           | (dropreason) Kernel network stack     |
 | Inspektor Gadget DNS tracer         | Network/Transport layer      | (dns) DNS resolution tracking          |
 | Inspektor Gadget TCP retransmission tracer      | Transport layer           | (tcpretrans) Detect TCP retransmissions     |
 
