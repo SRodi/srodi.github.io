@@ -56,7 +56,7 @@ With Hubble mode, Retina brings the full Hubble experience—flow visibility, UI
 
 #### Standard Control Plane
 
-In standard mode, Retina handles flow processing internally. Plugins send flow records to an internal Enricher, which attaches Kubernetes metadata. Flows are then passed to the Metrics Module, which aggregates and exposes them as Prometheus metrics (counters, histograms, etc.) on each node. Metrics include `retina_packets_forwarded_total`, `retina_packets_dropped_total`, `retina_dns_request_total`, and more, broken down by node or pod. This mode works on all platforms (Linux and Windows) but offers slightly less detail than Hubble mode. As the project matures, we plan to deprecate standard mode in favor of Hubble, aiming for deeper integration and broader compatibility.
+In standard mode, Retina handles flow processing internally. Plugins send flow records to an internal Enricher, which attaches Kubernetes metadata. Flows are then passed to the Metrics Module, which aggregates and exposes them as Prometheus metrics (counters, histograms, etc.) on each node. Metrics include `networkobservability_packets_forwarded_total`, `networkobservability_packets_dropped_total`, `networkobservability_dns_request_total`, and more, broken down by node or pod. This mode works on all platforms (Linux and Windows) but offers slightly less detail than Hubble mode. As the project matures, we plan to deprecate standard mode in favor of Hubble, aiming for deeper integration and broader compatibility.
 
 ### Data Plane
 
