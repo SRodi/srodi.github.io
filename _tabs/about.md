@@ -14,6 +14,10 @@ I have a BSc(Hons) in Software Development and a MSc in Research (Cloud Native P
 
 Currently working on Retina Open Source Kubernetes Networking Observability solution based on eBPF, and Cilium managed offering as part of Advanced Container Networking and Security (ACNS) on Azure AKS. In Aprl 2025 I published an article on Microsoft's Linux and Open Source Blog: [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361), the article was based on a demo I presented with colleagues at the Microsoft AKS booth during KubeCon 2025.
 
+I have also presented Retina OSS at the eCHO LiveStream hosted by [Liz Rice](https://www.lizrice.com/).
+
+{% include embed/youtube.html id='dMyb54xUSL8' %}
+
 In my previous role I lead a number of projects in IBM Cloud for VMware solutions including the IaC for the control plane on a multi zone region deployment, production tools (i.e. secrets migrations, objects sync), and a Kubernetes Operator to automate Secrets rotation, including the integration with Cloud Secret Manager.
 
 I have a background in software development with experience in Java, Python, JavaScript and now focusing primarily in Go. Over the past 5 years I worked in production with Jenkins, GitLab CI/CD, TravisCI, Atlantis, Tekton, GitHub Actions, IBM Cloud Schematics and Toolchain. I am curious, adaptable and focused on growing together with the team. I enjoy mentoring and working in diverse teams. I believe knowledge sharing and good communication are essential for growth.
