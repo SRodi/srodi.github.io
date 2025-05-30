@@ -4,6 +4,8 @@ icon: fas fa-info-circle
 order: 4
 ---
 
+## About me
+
 Software engineer specialised in DevOps, with extensive experience in cloud, having built infrastructure on Azure, AWS, GCP, IBM Cloud, and others. Currently focused on Kubernetes, Cilium, Go, OpenSource and eBPF.
 
 My expertise includes IaC technologies and in particular Terraform and Pulumi. I am an open source contributor, part of Microsoft, Kubernetes and Istio organisations. I am certified in Kubernetes holding CKA and CKS certifications.
