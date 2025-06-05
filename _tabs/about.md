@@ -4,23 +4,23 @@ icon: fas fa-info-circle
 order: 4
 ---
 
-## About me
+# Simone Rodigari
 
-Software engineer specialised in DevOps, with extensive experience in cloud, having built infrastructure on Azure, AWS, GCP, IBM Cloud, and others. Currently focused on Kubernetes, Cilium, Go, OpenSource and eBPF.
+I am a Software engineer specialised in DevOps, with extensive experience in cloud, having built infrastructure on Azure, AWS, GCP, IBM Cloud, and other public cloud providers. I am currently focused on Kubernetes, Cilium, Go, and eBPF.
 
 My expertise includes IaC technologies and in particular Terraform and Pulumi. I am an open source contributor, part of Microsoft, Kubernetes and Istio organisations. I am certified in Kubernetes holding CKA and CKS certifications.
 
-I have a BSc(Hons) in Software Development and a MSc in Research (Cloud Native Performance and Security). I was the leading author of cited paper [Performance Analysis of Zero-Trust multi-cloud](https://ieeexplore.ieee.org/document/9582229) presented at IEEE CLOUD 2021. I have also published a number of articles on my personal blog, Kubernetes blog and medium.
+I have a BSc(Hons) in Software Development and a MSc in Research (Cloud Native Performance and Security). I was the leading author of cited paper [Performance Analysis of Zero-Trust multi-cloud](https://ieeexplore.ieee.org/document/9582229) presented at IEEE CLOUD 2021, where I analyzed the performance impact of a service-mesh with a side-car + kube-proxy VS side-car + eBPF dataplane. I have also published a number of articles on my personal blog, Kubernetes blog and medium.
 
-Currently working on Retina Open Source Kubernetes Networking Observability solution based on eBPF, and Cilium managed offering as part of Advanced Container Networking Services (ACNS) on Azure AKS. In April 2025 I published an article on Microsoft's Linux and Open Source Blog: [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361), the article was based on a demo I presented with colleagues at the Microsoft AKS booth during KubeCon 2025.
+I am Currently working on Retina Open Source Kubernetes Networking Observability solution based on eBPF, and Cilium managed offering as part of Advanced Container Networking Services (ACNS) on Azure AKS. In April 2025 I published an article on Microsoft's Linux and Open Source Blog: [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361), the article was based on a demo I presented with colleagues at the Microsoft AKS booth during KubeCon 2025.
 
 I have also presented Retina OSS at the eCHO LiveStream hosted by [Liz Rice](https://www.lizrice.com/).
 
 {% include embed/youtube.html id='dMyb54xUSL8' %}
 
-In my previous role I lead a number of projects in IBM Cloud for VMware solutions including the IaC for the control plane on a multi zone region deployment, production tools (i.e. secrets migrations, objects sync), and a Kubernetes Operator to automate Secrets rotation, including the integration with Cloud Secret Manager.
+In my previous role I lead a number of projects in IBM Cloud for VMware solutions including the Infra automation for the control plane on a multi zone region deployment, production tools including secrets migrations, production artifacts sync process, and a Kubernetes Operator with three controlles to automate Secrets rotation, including the integration with Cloud Secret Manager.
 
-I have a background in software development with experience in Java, Python, JavaScript and now focusing primarily in Go. Over the past 5 years I worked in production with Jenkins, GitLab CI/CD, TravisCI, Atlantis, Tekton, GitHub Actions, IBM Cloud Schematics and Toolchain. I am curious, adaptable and focused on growing together with the team. I enjoy mentoring and working in diverse teams. I believe knowledge sharing and good communication are essential for growth.
+I have a background in software development with experience in Java, Python, JavaScript and now focusing primarily in Go. Over the past 6 years I worked in production with Jenkins, GitLab CI/CD, TravisCI, Atlantis, Tekton, GitHub Actions, IBM Cloud Schematics, Toolchain and Azure DevOps. I am curious, adaptable and focused on growing together with the team. I enjoy mentoring and working in diverse teams. I believe knowledge sharing and good communication are essential for growth.
 
 I have a proven record of leading and delivering projects from inception to production, while focusing on continuously adding value. I achieve this by using a broad set of technologies and tools, while adopting an iterative incremental approach based on Agile and Scrum.
 
