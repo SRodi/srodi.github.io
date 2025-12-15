@@ -5,7 +5,7 @@ categories: [kubernetes, networking]
 tags: [kubernetes, networking, cni, theory]
 mermaid: true
 image:
-  path: /kubernetes_network_part%201.webp
+  path: /k8s_net_p1.webp
   alt: "Kubernetes Networking Model"
 ---
 
