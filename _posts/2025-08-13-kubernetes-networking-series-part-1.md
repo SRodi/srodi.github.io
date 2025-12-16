@@ -11,8 +11,6 @@ image:
 
 ## Introduction
 
-Introduction
-
 Kubernetes networking is often described as confusing or even “black magic.” For many people, that confusion starts the moment something simple doesn’t work.
 
 ### Example 1: Pods that can’t talk to each other
