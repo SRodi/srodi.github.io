@@ -44,6 +44,7 @@ graph TB
     subgraph KubeSystem [Namespace: kube-system]
         API[Kubernetes API]
         CoreDNS[CoreDNS Pods]
+        Records[DNS Records]
         Svc[Service: kube-dns<br>10.96.0.10]
     end
     
@@ -51,9 +52,11 @@ graph TB
         Client[Client Pod]
     end
 
-    API -- "Watch Services/Pods" --> CoreDNS
+    CoreDNS -- "Watches Services/Pods" --> API
+    CoreDNS -- "Creates" --> Records
     Client -- "DNS Query (UDP 53)" --> Svc
     Svc -- "Load Balance" --> CoreDNS
+    CoreDNS -. "Responds<br>(10.96.5.20)" .-> Client
 ```
 
 ## 2. The Client Side: Inside the Pod
@@ -84,6 +87,7 @@ Because `backend` has fewer than 5 dots (see `ndots:5`), the OS resolver doesn't
 **Scenario:** A Pod in namespace `default` tries to resolve `backend`.
 
 ```mermaid
+%%{init: {'sequence': {'mirrorActors': false}}}%%
 sequenceDiagram
     participant App as Application
     participant OS as OS Resolver
@@ -141,9 +145,9 @@ graph TB
     Client -. "Or Connect" .-> P2["Pod B (10.244.2.8)"]
 ```
 
-### 4.3. SRV Records (Named Ports)
+### 4.3. Service (SRV) Records
 
-Often overlooked, Kubernetes also creates `SRV` records for named ports. This is useful if you need to discover the port number dynamically.
+Often overlooked, Kubernetes also creates **Service (SRV)** records for named ports. An SRV record is a type of DNS record that specifies the hostname and port number of servers for a specified service. This is useful if you need to discover the port number dynamically.
 
 * **Format:** `_[port-name]._[protocol].[service].[ns].svc.cluster.local`
 * **Example:** `_http._tcp.my-svc.default.svc.cluster.local`
@@ -236,13 +240,6 @@ In **Part 5**, we will wrap up the series by looking at **Debugging**. We will l
 * **CoreDNS:** [Official Site](https://coredns.io/)
 * **Kubernetes DNS:** [Official Documentation](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
 * **Debugging DNS:** [Kubernetes Guide](https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/)
+* **NodeLocal DNSCache:** [Official Documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/)
 
-## Series Navigation
 
-| Part | Topic | Description |
-|:---|:---|:---|
-| [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux Namespaces. |
-| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins create the network plumbing. |
-| [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable IPs and load balancing with Services. |
-| [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Service discovery and naming with CoreDNS. |
-| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Troubleshooting with Ephemeral Containers and eBPF. |

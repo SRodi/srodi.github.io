@@ -180,6 +180,23 @@ The Linux kernel tracks every connection passing through it. When the DNAT happe
 
 When the Pod replies, it sends a packet back to the Client. The kernel sees this reply, looks up its table, and reverses the translation (SNAT). It changes the Source IP from the Pod IP back to the Service IP.
 
+### See it in action
+
+You can inspect the connection tracking table on a node to see these translations in real-time.
+
+```bash
+# List connections (filtered by the Service IP)
+$ conntrack -L -d 10.96.0.100
+tcp      6 119 ESTABLISHED src=10.244.1.5 dst=10.96.0.100 sport=43912 dport=80 \
+    src=10.244.2.8 dst=10.244.1.5 sport=80 dport=43912 [ASSURED] mark=0 use=1
+```
+
+In this entry:
+*   **Original Direction:** `src=10.244.1.5 dst=10.96.0.100` (Client -> Service)
+*   **Reply Direction:** `src=10.244.2.8 dst=10.244.1.5` (Pod -> Client)
+
+The kernel uses this entry to automatically rewrite the reply packet's source IP from `10.244.2.8` back to `10.96.0.100`, so the client accepts it.
+
 **Result:** The Client thinks it's talking to the Service IP the whole time, never knowing the backend Pod IP even exists.
 
 ## Kube-proxy
@@ -407,6 +424,8 @@ sequenceDiagram
 * **Netfilter/Iptables:** [Project Homepage](https://netfilter.org/projects/iptables/index.html)
 * **IPVS:** [Linux Virtual Server](http://www.linuxvirtualserver.org/software/ipvs.html)
 * **Cilium:** [Kube-Proxy Replacement](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)
+* **Conntrack:** [Conntrack tools](https://conntrack-tools.netfilter.org/)
+* **IPVS Software:** [Official Site](http://www.linuxvirtualserver.org/software/ipvs.html)
 
 ## Summary
 
@@ -417,12 +436,4 @@ sequenceDiagram
 
 In **Part 4**, we will look at how we find these Services by name using **DNS**, completing the mental model of how applications talk to each other.
 
-## Series Navigation
 
-| Part | Topic | Description |
-|:---|:---|:---|
-| [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux Namespaces. |
-| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins create the network plumbing. |
-| [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable IPs and load balancing with Services. |
-| [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Service discovery and naming with CoreDNS. |
-| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Troubleshooting with Retina and Wireshark. |

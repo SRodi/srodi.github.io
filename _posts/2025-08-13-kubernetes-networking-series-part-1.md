@@ -234,6 +234,48 @@ This is why a Pod can listen on port 80 even if the Node is already using port 8
 
 > **Note:** This is where **etcd** comes in. It stores the desired state of the cluster (e.g., "Pod A should exist"). The Kubelet reads this state and instructs the runtime to create the namespaces.
 
+## Understanding IP Addresses in Kubernetes
+
+Before we get to the rules, let's clarify the different types of IP addresses you will see. It is crucial to distinguish between the Node's network and the Pod's network.
+
+### 1. Node IP vs. Pod IP
+
+*   **Node IP:** This is the IP address of the physical or virtual machine (Worker Node). It belongs to the underlying network (e.g., your VPC, home router, or data center network).
+*   **Pod IP:** This is the IP address assigned to a specific Pod. It belongs to the Kubernetes Cluster network.
+
+### 2. The Pod CIDR Slice
+
+How does Kubernetes know which IP to give to a Pod?
+The cluster has a large range of IPs reserved for Pods (e.g., `10.244.0.0/16`). This large range is sliced up, and each Node is assigned a smaller chunk, known as the **Pod CIDR**.
+
+*   **Node 1** gets `10.244.1.0/24` -> All Pods on Node 1 will have IPs like `10.244.1.x`.
+*   **Node 2** gets `10.244.2.0/24` -> All Pods on Node 2 will have IPs like `10.244.2.x`.
+
+This ensures that Pod IPs are unique across the cluster and makes routing easier (we know that `10.244.1.x` is always on Node 1).
+
+### 3. System Pods (Host Network)
+
+Not all Pods get their own IP! Some system components (like `kube-proxy` or CNI agents) need to manipulate the Node's network stack directly. These Pods run with `hostNetwork: true`.
+
+*   **Regular Pod:** Has its own unique Pod IP.
+*   **System Pod (HostNetwork):** Shares the **Node IP**. It does not get a Pod IP.
+
+```mermaid
+graph TB
+    subgraph Node1 ["Node 1 (Node IP: 192.168.1.10)"]
+        direction TB
+        
+        subgraph PodCIDR ["Pod CIDR Slice: 10.244.1.0/24"]
+            PodA["Pod A<br>IP: 10.244.1.5"]
+            PodB["Pod B<br>IP: 10.244.1.6"]
+        end
+
+        subgraph HostNet ["Host Network"]
+            SystemPod["System Pod (kube-proxy)<br>IP: 192.168.1.10"]
+        end
+    end
+```
+
 ## The 3 Fundamental Rules (The "Golden Rules")
 
 The Kubernetes networking model is defined by three specific requirements. Any networking implementation (CNI plugin) *must* satisfy these rules to be Kubernetes-compliant.
@@ -335,12 +377,4 @@ We have defined the **Model** and the **Promises**. But how does a Pod actually 
 
 In **Part 2**, we will dive into **CNI (Container Network Interface)** and see exactly how Pods get onto the network.
 
-<!-- ## Series Navigation
 
-| Part | Topic | Description |
-|:---|:---|:---|
-| [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux Namespaces. |
-| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins create the network plumbing. |
-| [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable IPs and load balancing with Services. |
-| [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Service discovery and naming with CoreDNS. |
-| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Troubleshooting with Retina and Wireshark. | -->

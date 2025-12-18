@@ -92,8 +92,18 @@ ip route show
 
 **What to look for:**
 
-* **Default Route:** You should see `default via 10.x.x.1`. This is the gateway (the bridge or CNI interface on the Node).
+* **Default Route:** You should see a line like `default via 10.244.1.1`. The IP address (`10.244.1.1` in this example) is your **Gateway IP**.
 * **Missing Route:** If the default route is missing, the Pod can only talk to its own subnet.
+
+**Verification on the Node:**
+
+You can verify that this gateway exists on the host. SSH into the Node where the Pod is running and check the interfaces using the IP you found above:
+
+```bash
+# On the Node
+ip addr show | grep <GATEWAY_IP>
+# You should see an interface (e.g., cni0, cilium_host) with this IP.
+```
 
 **How to Fix:**
 
@@ -127,9 +137,11 @@ cat /etc/resolv.conf
 ```
 
 **Common Issue: ndots**
-If you see `options ndots:5`, it means every lookup (like `google.com`) will first try `google.com.default.svc.cluster.local`, then `google.com.svc.cluster.local`, etc. This causes 5x the DNS traffic.
+If you see `options ndots:5`, it means every lookup (like `google.com`) will first try `google.com.default.svc.cluster.local`, then `google.com.svc.cluster.local`, etc. This causes unnecessary DNS traffic (up to 5 failed queries before the real one).
 
-* **Fix:** Use Fully Qualified Domain Names (FQDN) ending with a dot (e.g., `google.com.`) to skip the search list.
+**How to Fix:**
+
+* **Use FQDN:** Use Fully Qualified Domain Names (FQDN) ending with a dot (e.g., `google.com.`) to skip the search list.
 
 ## Section 3: Debugging Services (The Virtual IP)
 
@@ -154,9 +166,11 @@ nc -zv 10.96.0.100 80
 
 **Hairpinning** is when a Pod tries to talk to *itself* via the Service IP.
 
+* **Is it allowed?** **Yes.** Kubernetes requires that a Pod can reach itself via its Service IP.
 * **Scenario:** Pod A (IP `10.1.1.5`) calls Service A (`10.96.0.100`), which resolves back to Pod A (`10.1.1.5`).
 * **The Problem:** Some CNIs or bridge configurations fail to route the packet back to the same interface it came from.
 * **Diagnosis:** You can connect to *other* Pods, but the Pod cannot connect to the Service that points to itself.
+* **How to Fix:** This is usually a CNI configuration issue. Check if your CNI plugin has `hairpinMode` enabled (often in `/etc/cni/net.d/`). If using a bridge, the bridge interface on the node must allow packets to return to the same port they entered.
 
 ## Section 4: The Packet Level (The Truth)
 
@@ -192,6 +206,7 @@ Open it in **Wireshark**.
 **How to Fix:**
 
 * **Retransmissions:** Check for MTU mismatches (e.g., Overlay MTU vs Physical MTU). Check physical network congestion.
+* **TCP Resets:** The destination rejected the connection. Check if the application is actually running and listening on that port.
 * **No SYN-ACK:** If the packet leaves the source but never arrives at the destination, check the intermediate firewalls or NetworkPolicies. If it arrives but is ignored, check the application logs on the destination.
 
 ## Section 5: Advanced Debugging (Node Level)
@@ -290,11 +305,18 @@ This tells you explicitly: "The firewall dropped an IPv4 packet (Proto 2048) des
 
 ## References
 
-* [Kubernetes Debugging Guide](https://kubernetes.io/docs/tasks/debug/)
-* [Netshoot](https://github.com/nicolaka/netshoot)
-* [Wireshark User Guide](https://www.wireshark.org/docs/wsug_html_chunked/)
-* [Tcpdump Manual](https://www.tcpdump.org/manpages/tcpdump.1.html)
-* [bpftrace](https://github.com/iovisor/bpftrace)
+* **Kubernetes Debugging:** [Official Guide](https://kubernetes.io/docs/tasks/debug/)
+* **Netshoot:** [GitHub Repository](https://github.com/nicolaka/netshoot)
+* **Wireshark:** [User Guide](https://www.wireshark.org/docs/wsug_html_chunked/)
+* **Tcpdump:** [Manual Page](https://www.tcpdump.org/manpages/tcpdump.1.html)
+* **bpftrace:** [GitHub Repository](https://github.com/iovisor/bpftrace)
+
+> For advanced debugging, check out **Retina**.
+>
+> * [Retina Shell](https://retina.sh/docs/Troubleshooting/shell): Allows you to create a privileged container inside a Pod or on a Node, giving you full access to the network namespace.
+> * [Retina Capture](https://retina.sh/docs/Troubleshooting/capture): Provides distributed packet capture capabilities, allowing you to automatically capture and download pcap files to your local machine.
+>
+{: .prompt-info }
 
 ## Summary
 

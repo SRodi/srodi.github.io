@@ -66,7 +66,7 @@ graph TB
     subgraph Node ["Worker Node"]
         
         subgraph HostNS ["Host Network Namespace"]
-            NodeEth["Node eth0"]
+            NodeEth["Node eth0<br>10.244.1.1"]
             CNI_Mechanism["CNI Mechanism<br>(Bridge, Routing, eBPF)"]
             Veth_Host["veth7382"]
         end
@@ -112,6 +112,7 @@ $ kubectl exec -it my-pod -- ip link show
 Let's walk through the generic lifecycle of a Pod's network setup. This happens every time a Pod is scheduled.
 
 ```mermaid
+%%{init: {'sequence': {'mirrorActors': false}}}%%
 sequenceDiagram
     participant S as Scheduler
     participant K as Kubelet
@@ -137,6 +138,12 @@ sequenceDiagram
     * Moves one end into the Pod's namespace and names it `eth0`.
     * **Assigns an IP** to that interface (usually via an IPAM sub-plugin).
     * Sets up the **default route** inside the Pod so traffic knows where to go.
+      ```bash
+      $ kubectl exec -it my-pod -- ip route show
+      # "default via" means: send everything else to the gateway (10.244.1.1)
+      default via 10.244.1.1 dev eth0
+      10.244.1.0/24 dev eth0 proto kernel scope link src 10.244.1.5
+      ```
     * Connects the node-side veth to the cluster network (via a bridge, routing table, etc.).
 4. **Ready:** The CNI returns success, and the application container starts.
 
@@ -301,12 +308,4 @@ In **Part 3**, we will tackle the next big challenge: **Services**. Pod IPs are 
 * **IPIP:** [RFC 2003](https://datatracker.ietf.org/doc/html/rfc2003)
 * **BGP:** [RFC 4271](https://datatracker.ietf.org/doc/html/rfc4271)
 
-## Series Navigation
 
-| Part | Topic | Description |
-|:---|:---|:---|
-| [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux Namespaces. |
-| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins create the network plumbing. |
-| [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable IPs and load balancing with Services. |
-| [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Service discovery and naming with CoreDNS. |
-| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Troubleshooting with Retina and Wireshark. |
