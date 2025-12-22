@@ -68,7 +68,7 @@ graph TB
     Proxy <--> API
 
     Kubelet --> Runtime
-    Runtime --> CNI as "invokes"
+    Runtime -->|invokes| CNI
     Runtime --> Pod
     CNI -. "Configures Network" .-> Pod
 ```
