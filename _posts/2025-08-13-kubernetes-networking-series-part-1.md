@@ -68,7 +68,7 @@ graph TB
     Proxy <--> API
 
     Kubelet --> Runtime
-    Kubelet --> CNI
+    Runtime --> CNI as "invokes"
     Runtime --> Pod
     CNI -. "Configures Network" .-> Pod
 ```
@@ -82,7 +82,7 @@ graph TB
 
 ### Worker Node (The Muscle)
 
-- **Kubelet:** The primary agent. It watches the API Server for new Pods assigned to its node. It instructs the runtime to start the container and the CNI plugin to configure the network.
+- **Kubelet:** The primary agent. It watches the API Server for new Pods assigned to its node. It instructs the container runtime (via CRI) to start the Pod; the runtime invokes the CNI plugin to configure networking.
 - **Kube-proxy:** Manages network rules (using `iptables` or IPVS) to implement **Services** (load balancing).
 - **Container Runtime:** (e.g., containerd) Creates the containers and the Network Namespaces.
 - **CNI Plugin:** Configures the network interface inside the Pod's namespace.
