@@ -120,7 +120,7 @@ In the context of CNI, we care most about the **Ethernet Header** and the **IP H
 
 ## 1. The CNI Contract (The Golden Rules)
 
-Kubernetes itself does not handle networking. It offloads that responsibility to a **CNI Plugin**. However, Kubernetes is very strict about what it expects that plugin to do.
+Kubernetes itself does not handle networking. It offloads that responsibility to a **CNI Plugin**. It is important to note that **CNI runs independently on every node**, configuring local networking according to cluster-wide expectations. However, Kubernetes is very strict about what it expects that plugin to do.
 
 Every CNI plugin must satisfy these non-negotiable requirements:
 
@@ -717,7 +717,11 @@ We have demystified the plumbing. We know that a CNI plugin is responsible for s
 
 ## What's Next
 
-In **Part 3**, we will tackle the next big challenge: **Services**. Now that we have a flat network where Pods can reach each other, we face a new problem: Pod IPs are ephemeral, they change when Pods die. How do we reliably route traffic to a moving target? We will explore how **Services** and **kube-proxy** build upon the CNI foundation to provide stable discovery and load balancing.
+At this point, Pods have IPs and can reach each other, but users don’t talk to Pods directly.
+
+In **Part 3**, we’ll tackle the next big challenge: **Services**. Now that we have a flat network where Pods can communicate freely, we face a new problem: Pod IPs are ephemeral and change when Pods are rescheduled or restarted. How do we reliably route traffic to a moving target?
+
+We’ll explore how **Services** and **kube-proxy** build on top of the CNI foundation to provide stable virtual IPs, service discovery, and load balancing.
 
 ## References
 
