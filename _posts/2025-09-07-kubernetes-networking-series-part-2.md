@@ -30,15 +30,17 @@ Before we dive in, let's clarify a few terms used throughout this post:
        
        subgraph Packet ["Network Packet"]
          direction LR
-         IP["IP Header<br>Src: 10.0.0.1<br>Dst: 10.0.0.2"]:::header ~~~ Data[Payload]:::payload
+         IP["IP Header<br>Src: 10.244.1.5<br>Dst: 10.244.2.5"]:::header ~~~ Data[Payload]:::payload
        end
     ```
 
-* **Routable IP:** An IP address that can be reached directly by other machines on the network without needing translation (NAT).
+* **Routable IP:** An IP address that can be reached directly by other machines on the network without needing Network Address Translation (NAT).
 * **IPAM (IP Address Management):** The system responsible for tracking which IPs are available and assigning them to Pods. It ensures no two Pods get the same IP.
 * **Network Namespace:** A Linux kernel feature that isolates network resources (interfaces, routing tables). Each Pod gets its own namespace.
 * **veth pair (Virtual Ethernet):** A virtual cable with two ends. What goes in one end comes out the other. We use this to connect a Pod's isolated namespace to the Node's network.
 * **Bridge:** A virtual network switch that connects multiple network interfaces together.
+* **Routing:** The process of selecting a path for traffic in a network. In Kubernetes, this ensures packets from a Pod on one Node know how to reach a Pod on another Node.
+* **Gateway:** The interface on the Node (Host Network) that acts as the default route for the Pod. All traffic leaving the Pod goes here first to be routed to its destination.
 
 ## CNI and the OSI Model
 
@@ -46,8 +48,8 @@ To truly understand CNI, it helps to map its responsibilities to the [OSI Model]
 
 The CNI plugin is primarily concerned with **Layer 2 (Data Link)** and **Layer 3 (Network)**.
 
-*   **Layer 2 (Data Link):** This is the plumbing. It involves creating the virtual ethernet cables (`veth` pairs), attaching them to bridges, and handling ARP/MAC addresses so that ethernet frames can move.
-*   **Layer 3 (Network):** This is the addressing and routing. It involves assigning IP addresses to Pods (IPAM) and setting up the routes so that packets know where to go.
+* **Layer 2 (Data Link):** This is the plumbing. It involves creating the virtual ethernet cables (`veth` pairs), attaching them to bridges, and handling ARP/MAC addresses so that ethernet frames can move.
+* **Layer 3 (Network):** This is the addressing and routing. It involves assigning IP addresses to Pods (IPAM) and setting up the routes so that packets know where to go.
 
 Here is a visualization of how CNI maps to the OSI layers:
 
@@ -102,13 +104,13 @@ graph LR
     classDef grey fill:#9e9e9e,stroke:#616161,stroke-width:2px,color:#fff
 ```
 
-**CNI Focus: The Outer Layers**
+### CNI Focus: The Outer Layers
 
 In the context of CNI, we care most about the **Ethernet Header** and the **IP Header**.
 
-*   **Ethernet Header (Layer 2):** Contains MAC addresses. This is used for local delivery between the Pod and the Node (across the veth pair) or between the Node and the physical switch. The CNI needs to ensure ARP resolution works so these headers can be populated correctly.
-*   **IP Header (Layer 3):** Contains IP addresses. This is the "global" address. The CNI ensures that a packet with a destination IP of a remote Pod gets routed to the correct Node.
-*   **Transport Header (Layer 4):** Contains Ports (e.g., 80, 443). CNI plugins typically *ignore* this for basic connectivity. However, if you use **NetworkPolicies**, the CNI plugin acting as the enforcer will inspect this header to allow or deny traffic.
+* **Ethernet Header (Layer 2):** Contains MAC addresses. This is used for local delivery between the Pod and the Node (across the veth pair) or between the Node and the physical switch. The CNI needs to ensure ARP resolution works so these headers can be populated correctly.
+* **IP Header (Layer 3):** Contains IP addresses. This is the "global" address. The CNI ensures that a packet with a destination IP of a remote Pod gets routed to the correct Node.
+* **Transport Header (Layer 4):** Contains Ports (e.g., 80, 443). CNI plugins typically *ignore* this for basic connectivity. However, if you use **NetworkPolicies**, the CNI plugin acting as the enforcer will inspect this header to allow or deny traffic.
 
 ## 1. The CNI Contract (The Golden Rules)
 
@@ -124,8 +126,8 @@ Every CNI plugin must satisfy these non-negotiable requirements:
 **Key Takeaway:** *How* this is done is up to the CNI (using bridges, routing, eBPF, etc.), but these outcomes must always be true.
 
 > **Codebase References:**
-- **CNI:** [containernetworking/cni](https://github.com/containernetworking/cni) - The Go library and specification for writing network plugins.
-- **CRI:** [kubernetes/cri-api](https://github.com/kubernetes/cri-api) - The definitions for the Container Runtime Interface, which triggers the CNI.
+* **CNI:** [containernetworking/cni](https://github.com/containernetworking/cni) - The Go library and specification for writing network plugins.
+* **CRI:** [kubernetes/cri-api](https://github.com/kubernetes/cri-api) - The definitions for the Container Runtime Interface, which triggers the CNI.
 {: .prompt-info }
 
 ## 2. The Universal Pod Networking Pattern
@@ -144,8 +146,8 @@ graph TB
     subgraph Node ["Worker Node"]
         
         subgraph HostNS ["Host Network Namespace"]
-            NodeEth["Node eth0<br>10.244.1.1"]
-            CNI_Mechanism["CNI Mechanism<br>(Bridge, Routing, eBPF)"]
+            NodeEth["Gateway<br>10.244.1.1"]
+            CNI_Mechanism["CNI Integration<br>(Bridge, Routing, eBPF)"]
             Veth_Host["veth7382"]
         end
 
@@ -227,12 +229,14 @@ sequenceDiagram
     * Moves one end into the Pod's namespace and names it `eth0`.
     * **Assigns an IP** to that interface (usually via an IPAM sub-plugin).
     * Sets up the **default route** inside the Pod so traffic knows where to go.
+
       ```bash
       $ kubectl exec -it my-pod -- ip route show
       # "default via" means: send everything else to the gateway (10.244.1.1)
       default via 10.244.1.1 dev eth0
       10.244.1.0/24 dev eth0 proto kernel scope link src 10.244.1.5
       ```
+
     * Connects the node-side veth to the cluster network (via a bridge, routing table, etc.).
 5. **Ready:** The CNI returns success to the CRI, which reports back to the Kubelet, and the application container starts.
 
@@ -315,9 +319,9 @@ The most common encapsulation protocol.
 
 When Pod A sends traffic to Pod B, the CNI and the Node's kernel work together to wrap the packet for transport across the physical network.
 
-1.  **Original Packet:** Pod A creates a standard packet addressed to Pod B.
-2.  **Overlay Header:** The kernel encapsulates the frame with a **VXLAN** header (orange).
-3.  **Physical Transport:** Node A adds the **UDP** transport (grey) and its own **Outer IP header** (blue) to send it to Node B.
+1. **Original Packet:** Pod A creates a standard packet addressed to Pod B.
+2. **Overlay Header:** The kernel encapsulates the frame with a **VXLAN** header (orange).
+3. **Physical Transport:** Node A adds the **UDP** transport (grey) and its own **Outer IP header** (blue) to send it to Node B.
 
 ```mermaid
 graph TD
@@ -401,10 +405,10 @@ graph TD
 
 At the destination, the envelope is peeled open layer by layer.
 
-1.  **Receive on Wire:** Node B (192.168.1.20) receives the full packet.
-2.  **Strip Transport:** The Kernel sees the packet is for itself, removes the **Outer IP header** (blue) and **UDP** (grey).
-3.  **Unwrap:** The VXLAN interface removes the **VXLAN header** (orange).
-4.  **Deliver:** The original packet (Src: Pod A, Dst: Pod B) is revealed and delivered.
+1. **Receive on Wire:** Node B (192.168.1.20) receives the full packet.
+2. **Strip Transport:** The Kernel sees the packet is for itself, removes the **Outer IP header** (blue) and **UDP** (grey).
+3. **Unwrap:** The VXLAN interface removes the **VXLAN header** (orange).
+4. **Deliver:** The original packet (Src: Pod A, Dst: Pod B) is revealed and delivered.
 
 ```mermaid
 graph TD
@@ -488,8 +492,8 @@ graph TD
 
 While VXLAN is the most common example, you often see **Geneve** used in modern CNIs.
 
-*   **VXLAN** has a fixed header format with limited space for metadata (just the VNI ID).
-*   **Geneve** is designed to be extensible. It supports variable-length options (Type-Length-Value or TLV) inside the header.
+* **VXLAN** has a fixed header format with limited space for metadata (just the VNI ID).
+* **Geneve** is designed to be extensible. It supports variable-length options (Type-Length-Value or TLV) inside the header.
 
 Advanced CNIs like **Cilium** or **OVN-Kubernetes** use Geneve to embed rich context directly into the packet, such as the source security identity or tracing IDs, without needing a separate state lookup at the destination.
 
@@ -497,8 +501,8 @@ Advanced CNIs like **Cilium** or **OVN-Kubernetes** use Geneve to embed rich con
 
 **IPIP** is a simpler protocol that encapsulates one IP packet inside another.
 
-*   **Pros:** Lower overhead than VXLAN (adds fewer bytes) because it doesn't need an Ethernet or UDP header.
-*   **Cons:** Carries only IP traffic (no Layer 2 / Ethernet support).
+* **Pros:** Lower overhead than VXLAN (adds fewer bytes) because it doesn't need an Ethernet or UDP header.
+* **Cons:** Carries only IP traffic (no Layer 2 / Ethernet support).
 
 #### 4.1.2. Direct Routing (No Encapsulation)
 
@@ -567,9 +571,9 @@ graph LR
 
 A simplified form of direct routing for small clusters.
 
-*   **Mechanism:** Instead of using BGP to talk to routers, nodes update each other's routing tables securely.
-*   **Requirement:** All nodes must be on the same Layer 2 subnet (connected to the same switch/VLAN).
-*   **Limitation:** It cannot route across different subnets.
+* **Mechanism:** Instead of using BGP to talk to routers, nodes update each other's routing tables securely.
+* **Requirement:** All nodes must be on the same Layer 2 subnet (connected to the same switch/VLAN).
+* **Limitation:** It cannot route across different subnets.
 
 #### 4.1.3. Which dataplane am I using?
 
@@ -592,15 +596,17 @@ $ ip route get 10.244.1.5
 **2. Ask the CNI (Best Practice)**
 Modern CNIs have CLI tools that tell you exactly how they are configured.
 
-*   **Cilium:** The CLI on your laptop just shows cluster health. To see the network mode, run the status command *inside* a Cilium Pod:
+* **Cilium:** The CLI on your laptop just shows cluster health. To see the network mode, run the status command *inside* a Cilium Pod:
+
     ```bash
     $ kubectl -n kube-system exec -ti ds/cilium -- cilium status | grep -i "Tunnel"
     # Output: "Routing: Network: Tunnel [vxlan] ..." (Overlay)
     # Output: "Routing: Network: Native ..." (Direct Routing)
     ```
-*   **Calico:** Check the `Installation` resource (if using the Operator) and `IPPool`.
-    *   `kubectl get installation default -o yaml` -> Look for `calicoNetwork.linuxDataplane` (values: `Iptables` or `BPF`).
-    *   `kubectl get ippool -o yaml` -> Check `vxlanMode` (values: `Never`, `Always`, `CrossSubnet`).
+
+* **Calico:** Check the `Installation` resource (if using the Operator) and `IPPool`.
+  * `kubectl get installation default -o yaml` -> Look for `calicoNetwork.linuxDataplane` (values: `Iptables` or `BPF`).
+  * `kubectl get ippool -o yaml` -> Check `vxlanMode` (values: `Never`, `Always`, `CrossSubnet`).
 
 **3. The "Ground Truth" (tcpdump)**
 If you are still unsure, sniff the traffic on the physical interface (`eth0`) while pinging between Pods.
@@ -616,8 +622,8 @@ $ tcpdump -i eth0 -n port 4789
 
 This determines how Kubernetes Services and Network Policies are implemented in the Linux kernel. Before the packet even reaches the Pod, it must pass through this logic.
 
-1.  **Services (NAT & Load Balancing):** The packet is destined for a Virtual **Cluster IP**. The kernel must intercept it and perform **DNAT** (Destination NAT) to translate the destination IP to a specific real Pod IP. *(We will cover this mechanics in detail in Part 3).*
-2.  **Firewall (Network Policy):** The kernel checks if the source is allowed to talk to that destination.
+1. **Services (NAT & Load Balancing):** The packet is destined for a Virtual **Cluster IP**. The kernel must intercept it and perform **DNAT** (Destination NAT) to translate the destination IP to a specific real Pod IP. *(We will cover this mechanics in detail in Part 3).*
+2. **Firewall (Network Policy):** The kernel checks if the source is allowed to talk to that destination.
 
 ```mermaid
 graph LR
@@ -716,5 +722,3 @@ In **Part 3**, we will tackle the next big challenge: **Services**. Pod IPs are 
 * **VXLAN:** [RFC 7348](https://datatracker.ietf.org/doc/html/rfc7348)
 * **IPIP:** [RFC 2003](https://datatracker.ietf.org/doc/html/rfc2003)
 * **BGP:** [RFC 4271](https://datatracker.ietf.org/doc/html/rfc4271)
-
-

@@ -159,7 +159,7 @@ graph TD
         PodB[Pod B: 10.244.1.6]
     end
     subgraph Node2 [Node 2]
-        PodC[Pod C: 10.244.2.8]
+        PodC[Pod C: 10.244.2.5]
     end
     PodA -- Direct IP Reachability --> PodC
     PodB -- Direct IP Reachability --> PodC
@@ -285,7 +285,7 @@ You can find the official definition in the [Kubernetes Documentation](https://k
 > **All Pods can communicate with all other Pods on any other node without NAT.**
 {: .prompt-info }
 
-If Pod A is on Node 1 with IP `10.244.1.5`, and Pod B is on Node 2 with IP `10.244.2.10`, Pod A can send a packet directly to `10.244.2.10`. The destination sees the packet coming from `10.244.1.5`. No address translation happens in the middle.
+If Pod A is on Node 1 with IP `10.244.1.5`, and Pod B is on Node 2 with IP `10.244.2.5`, Pod A can send a packet directly to `10.244.2.5`. The destination sees the packet coming from `10.244.1.5`. No address translation happens in the middle.
 
 ```mermaid
 graph LR
@@ -293,9 +293,9 @@ graph LR
         PodA[Pod A<br>10.244.1.5]
     end
     subgraph Node2 [Node 2]
-        PodB[Pod B<br>10.244.2.10]
+        PodB[Pod B<br>10.244.2.5]
     end
-    PodA -- "Packet src: 10.244.1.5<br>dst: 10.244.2.10" --> PodB
+    PodA -- "Packet src: 10.244.1.5<br>dst: 10.244.2.5" --> PodB
 ```
 
 ### 2. Node-to-Pod Communication
@@ -327,7 +327,7 @@ graph LR
         HostPod["System Pod<br>(Host Network)"]
     end
     subgraph Node2 [Node 2]
-        PodB[Pod B<br>10.244.2.10]
+        PodB[Pod B<br>10.244.2.5]
     end
     HostPod -- "Traffic to Pod IP" --> PodB
 ```
@@ -373,6 +373,6 @@ By enforcing this flat network model, Kubernetes decouples the application from 
 
 We have defined the **Model** and the **Promises**. But how does a Pod actually get an IP? How is the "virtual wire" connected?
 
-In **Part 2**, we will dive into **CNI (Container Network Interface)** and see exactly how Pods get onto the network.
+In [Part 2](/posts/kubernetes-networking-series-part-2/), we will dive into **CNI (Container Network Interface)** and see exactly how Pods get onto the network.
 
 
