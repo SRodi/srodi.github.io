@@ -11,11 +11,17 @@ image:
 
 ## Introduction
 
-In [Part 1](/posts/kubernetes-networking-series-part-1/), we established the **Model**: the "Golden Rules" of Kubernetes networking. We learned that every Pod gets its own IP address and that NAT is forbidden for Pod-to-Pod communication.
+In [Part 1](/posts/kubernetes-networking-series-part-1/), we established the **Model**: the "Golden Rules" of Kubernetes networking. Before exploring *how* connections are made, let's briefly revisit these fundamental design principles. Kubernetes departs from traditional host networking (where ports are mapped to the host IP) to simplify application migration and service discovery.
+
+1. **Every Pod gets its own IP**: Unlike Docker’s default model where containers share the host IP and use dynamic ports, Kubernetes treats Pods like distinct VMs on the network. This means applications can run on well-known ports (like 80 or 443) without conflict, regardless of which node they land on.
+
+2. **Pod-to-Pod communication without NAT**: The network must be flat. A Pod on Node A can reach a Pod on Node B directly using its IP address. The IP address the sender sees and uses is the exact same IP address the receiver sees as its own. Network Address Translation (NAT) is strictly forbidden for internal traffic.
+
+3. **No Host Networking Dependence**: By decoupling the application network from the underlying host network, Kubernetes creates a consistent environment. Developers don't need to worry about the specific network configuration of the physical servers or cloud instances running their code.
 
 But *how* does this actually happen? When you schedule a Pod, who creates the network interface? Who decides which IP address it gets?
 
-This is **Part 2** of our series, where we dive into the **CNI (Container Network Interface)**. Instead of getting lost in the weeds of specific tools like Calico or Cilium, we will focus on the universal patterns that apply to *every* Kubernetes cluster.
+This is **Part 2** of our series, where we dive into the **Container Network Interface (CNI)**. This is the mechanism that implements Part 1’s "no NAT, unique Pod IPs" rule. Instead of getting lost in the weeds of specific tools like Calico or Cilium, we will focus on the universal patterns that apply to *every* Kubernetes cluster.
 
 ## Terminology
 
@@ -709,7 +715,9 @@ We have demystified the plumbing. We know that a CNI plugin is responsible for s
 
 "Once you understand how a Pod connects to its node, everything else in Kubernetes networking becomes easier, regardless of which CNI your cluster uses."
 
-In **Part 3**, we will tackle the next big challenge: **Services**. Pod IPs are ephemeral—they change when Pods die. How do we reliably route traffic to a moving target?
+## What's Next
+
+In **Part 3**, we will tackle the next big challenge: **Services**. Now that we have a flat network where Pods can reach each other, we face a new problem: Pod IPs are ephemeral, they change when Pods die. How do we reliably route traffic to a moving target? We will explore how **Services** and **kube-proxy** build upon the CNI foundation to provide stable discovery and load balancing.
 
 ## References
 
