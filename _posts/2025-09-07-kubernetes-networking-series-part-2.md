@@ -15,7 +15,7 @@ In [Part 1](/posts/kubernetes-networking-series-part-1/), we established the **M
 
 1. **Every Pod gets its own IP**: Unlike Docker’s default model where containers share the host IP and use dynamic ports, Kubernetes treats Pods like distinct VMs on the network. This means applications can run on well-known ports (like 80 or 443) without conflict, regardless of which node they land on.
 
-2. **Pod-to-Pod communication without NAT**: The network must be flat. A Pod on Node A can reach a Pod on Node B directly using its IP address. The IP address the sender sees and uses is the exact same IP address the receiver sees as its own. The model assumes Pod IPs are directly reachable (no NAT for pod-to-pod).
+2. **Pod-to-Pod communication without NAT**: The network must be flat. A Pod on Node A can reach a Pod on Node B directly using its IP address. The IP address the sender sees and uses is the exact same IP address the receiver sees as its own. The model assumes Pod IPs are directly reachable (no NAT for pod-to-pod traffic).
 
 3. **No Host Networking Dependence**: By decoupling the application network from the underlying host network, Kubernetes creates a consistent environment. Developers don't need to worry about the specific network configuration of the physical servers or cloud instances running their code.
 
@@ -40,7 +40,7 @@ Before we dive in, let's clarify a few terms used throughout this post:
        end
     ```
 
-* **Routable IP:** An IP address that can be reached directly by other machines on the network without needing Network Address Translation (NAT).
+* **Routable IP:** An IP that is reachable within the cluster without NAT (i.e., other Pods/nodes can route to it directly).
 * **IPAM (IP Address Management):** The system responsible for tracking which IPs are available and assigning them to Pods. It ensures no two Pods get the same IP.
 * **Network Namespace:** A Linux kernel feature that isolates network resources (interfaces, routing tables). Each Pod gets its own namespace.
 * **veth pair (Virtual Ethernet):** A virtual cable with two ends. What goes in one end comes out the other. We use this to connect a Pod's isolated namespace to the Node's network.
@@ -52,7 +52,7 @@ Before we dive in, let's clarify a few terms used throughout this post:
 
 To truly understand CNI, it helps to map its responsibilities to the [OSI Model](https://en.wikipedia.org/wiki/OSI_model). While applications (Layer 7) and transport protocols like TCP (Layer 4) are what we interact with, CNI lives a bit lower down the stack.
 
-The CNI plugin is primarily concerned with **Layer 2 (Data Link)** and **Layer 3 (Network)**.
+The CNI plugin is primarily concerned with **Layer 2 (Data Link)** and **Layer 3 (Network)** for connectivity, and may also inspect Layer 4 when enforcing **NetworkPolicies**.
 
 * **Layer 2 (Data Link):** This is the plumbing. It involves creating the virtual ethernet cables (`veth` pairs), attaching them to bridges, and handling ARP/MAC addresses so that ethernet frames can move.
 * **Layer 3 (Network):** This is the addressing and routing. It involves assigning IP addresses to Pods (IPAM) and setting up the routes so that packets know where to go.
@@ -114,13 +114,13 @@ graph LR
 
 In the context of CNI, we care most about the **Ethernet Header** and the **IP Header**.
 
-* **Ethernet Header (Layer 2):** Contains MAC addresses. This is used for local delivery between the Pod and the Node (across the veth pair) or between the Node and the physical switch. The CNI needs to ensure ARP resolution works so these headers can be populated correctly.
+* **Ethernet Header (Layer 2):** Contains MAC addresses. Used for local delivery across the veth pair and between interfaces on the node (and out to the underlay via the node’s NIC).
 * **IP Header (Layer 3):** Contains IP addresses. This is the "global" address. The CNI ensures that a packet with a destination IP of a remote Pod gets routed to the correct Node.
 * **Transport Header (Layer 4):** Contains Ports (e.g., 80, 443). CNI plugins typically *ignore* this for basic connectivity. However, if you use **NetworkPolicies**, the CNI plugin acting as the enforcer will inspect this header to allow or deny traffic.
 
 ## 1. The CNI Contract (The Golden Rules)
 
-Kubernetes itself does not handle networking. It offloads that responsibility to a **CNI Plugin**. It is important to note that **CNI runs independently on every node**, configuring local networking according to cluster-wide expectations. However, Kubernetes is very strict about what it expects that plugin to do.
+Kubernetes itself does not handle networking. It offloads that responsibility to a **CNI Plugin**. It is important to note that **CNI runs independently on every node**, configuring local networking according to cluster-wide expectations. However, Kubernetes has strict expectations about what that plugin must provide.
 
 Every CNI plugin must satisfy these non-negotiable requirements:
 
@@ -145,14 +145,14 @@ Regardless of which CNI you use, the way a Pod connects to its Node is almost al
 * **veth pair:** This `eth0` is actually one end of a **Virtual Ethernet (veth) pair**.
 * **Node Connection:** The other end of the pair lives in the Node's host network namespace.
 
-**Every CNI uses this pattern.** The differences only start *after* the packet leaves the node side of the veth pair.
+**Nearly every CNI uses this pattern.** The differences only start *after* the packet leaves the node side of the veth pair.
 
 ```mermaid
 graph TB
     subgraph Node ["Worker Node"]
         
         subgraph HostNS ["Host Network Namespace"]
-            NodeEth["Gateway<br>10.244.1.1"]
+            NodeEth["Gateway (example)<br>10.244.1.1"]
             CNI_Mechanism["CNI Integration<br>(Bridge, Routing, eBPF)"]
             Veth_Host["veth7382"]
         end
@@ -213,7 +213,7 @@ sequenceDiagram
     participant C as CNI Plugin
     participant P as Pod Network
 
-    S->>K: 1. Schedule Pod to Node
+    S->>K: 1. Schedule (via API Server)
     K->>CR: 2. Create Pod Sandbox
     CR->>P: 3. Create Network Namespace
     CR->>C: 4. Call CNI ADD
@@ -501,7 +501,7 @@ While VXLAN is the most common example, you often see **Geneve** used in modern 
 * **VXLAN** has a fixed header format with limited space for metadata (just the VNI ID).
 * **Geneve** is designed to be extensible. It supports variable-length options (Type-Length-Value or TLV) inside the header.
 
-Advanced CNIs like **Cilium** or **OVN-Kubernetes** use Geneve to embed rich context directly into the packet, such as the source security identity or tracing IDs, without needing a separate state lookup at the destination.
+Advanced CNIs like **Cilium** or **OVN-Kubernetes** use Geneve to embed rich context directly into the packet, such as policy/security metadata, to carry additional metadata alongside the packet.
 
 ##### IPIP (IP-in-IP)
 
@@ -520,7 +520,7 @@ Advanced CNIs like **Cilium** or **OVN-Kubernetes** use Geneve to embed rich con
 
 **How does it work?**
 
-In this model, the CNI plugin runs a routing daemon (like a BGP bird process) on every node. This daemon talks to the physical routers (Top-of-Rack) and announces: *"Hey, I have the subnet `10.244.1.0/24`. Send all packets for those IPs to me (Node A)."*
+In this model, the CNI plugin runs a routing daemon (like BIRD, commonly used by Calico, or another BGP daemon) on every node. This daemon talks to the physical routers (Top-of-Rack) and announces: *"Hey, I have the subnet `10.244.1.0/24`. Send all packets for those IPs to me (Node A)."*
 
 Because the physical network knows where every Pod IP lives, packets flow natively without any modification.
 
@@ -577,7 +577,7 @@ graph LR
 
 A simplified form of direct routing for small clusters.
 
-* **Mechanism:** Instead of using BGP to talk to routers, nodes update each other's routing tables securely.
+* **Mechanism:** Instead of using BGP to talk to routers, nodes update each other's routing tables.
 * **Requirement:** All nodes must be on the same Layer 2 subnet (connected to the same switch/VLAN).
 * **Limitation:** It cannot route across different subnets.
 
@@ -627,9 +627,9 @@ $ tcpdump -i eth0 -n port 4789
 
 ### 4.2. The Enforcement Mechanism: iptables vs. eBPF
 
-This determines how Service virtual IP translation/load balancing and NetworkPolicy enforcement can be implemented on a node (iptables/IPVS vs eBPF, depending on the cluster). Before the packet even reaches the Pod, it must pass through this logic.
+This determines how a node implements Service virtual IP translation/load balancing and NetworkPolicy enforcement (iptables/IPVS vs eBPF, depending on the cluster). Before the packet even reaches the Pod, it must pass through this logic.
 
-1. **Services (NAT & Load Balancing):** The packet is destined for a Virtual **Cluster IP**. The kernel must intercept it and perform **DNAT** (Destination NAT) to translate the destination IP to a specific real Pod IP. *(We will cover this mechanics in detail in Part 3).*
+1. **Services (NAT & Load Balancing):** The packet is destined for a virtual **ClusterIP**. The kernel must intercept it and perform **DNAT** (Destination NAT) to translate the destination IP to a specific real Pod IP. *(We will cover these mechanics in detail in Part 3).*
 2. **Firewall (Network Policy):** The kernel checks if the source is allowed to talk to that destination.
 
 ```mermaid
@@ -644,7 +644,7 @@ graph LR
 
     subgraph NodeLogic ["Enforcement Logic"]
         direction TB
-        Service["1. Service (DNAT & LB)<br>Cluster IP &rarr; Pod IP"]:::blue
+        Service["1. Service (DNAT & LB)<br>ClusterIP &rarr; Pod IP"]:::blue
         Policy["2. Policy (Firewall)<br>Is this traffic allowed?"]:::green
         
         Service --> Policy
@@ -695,7 +695,7 @@ Check if `kube-proxy` is running or if your CNI has replaced it.
 # Check if kube-proxy is running
 $ kubectl get pods -n kube-system -l k8s-app=kube-proxy
 # If you see pods: You are likely using iptables (or IPVS).
-# If empty: Your CNI (like Cilium) has likely replaced it with eBPF.
+# If empty: Your CNI (like Cilium) may have replaced it with eBPF.
 
 # If using Cilium, ask it directly:
 $ cilium status | grep KubeProxyReplacement
