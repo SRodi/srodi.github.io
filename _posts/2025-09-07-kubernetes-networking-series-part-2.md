@@ -15,7 +15,7 @@ In [Part 1](/posts/kubernetes-networking-series-part-1/), we established the **M
 
 1. **Every Pod gets its own IP**: Unlike Docker’s default model where containers share the host IP and use dynamic ports, Kubernetes treats Pods like distinct VMs on the network. This means applications can run on well-known ports (like 80 or 443) without conflict, regardless of which node they land on.
 
-2. **Pod-to-Pod communication without NAT**: The network must be flat. A Pod on Node A can reach a Pod on Node B directly using its IP address. The IP address the sender sees and uses is the exact same IP address the receiver sees as its own. Network Address Translation (NAT) is strictly forbidden for internal traffic.
+2. **Pod-to-Pod communication without NAT**: The network must be flat. A Pod on Node A can reach a Pod on Node B directly using its IP address. The IP address the sender sees and uses is the exact same IP address the receiver sees as its own. The model assumes Pod IPs are directly reachable (no NAT for pod-to-pod).
 
 3. **No Host Networking Dependence**: By decoupling the application network from the underlying host network, Kubernetes creates a consistent environment. Developers don't need to worry about the specific network configuration of the physical servers or cloud instances running their code.
 
@@ -46,7 +46,7 @@ Before we dive in, let's clarify a few terms used throughout this post:
 * **veth pair (Virtual Ethernet):** A virtual cable with two ends. What goes in one end comes out the other. We use this to connect a Pod's isolated namespace to the Node's network.
 * **Bridge:** A virtual network switch that connects multiple network interfaces together.
 * **Routing:** The process of selecting a path for traffic in a network. In Kubernetes, this ensures packets from a Pod on one Node know how to reach a Pod on another Node.
-* **Gateway:** The interface on the Node (Host Network) that acts as the default route for the Pod. All traffic leaving the Pod goes here first to be routed to its destination.
+* **Gateway:** The next-hop IP the Pod uses as its default route (typically the node-side of the veth / bridge interface). All traffic leaving the Pod goes here first to be routed to its destination.
 
 ## CNI and the OSI Model
 
@@ -589,7 +589,7 @@ There are three main ways to check: inspecting the node, asking the CNI, or catc
 Check the network interfaces and routing table.
 
 ```bash
-# 1. Look for tunnel interfaces
+# 1. Look for tunnel interfaces (one common case)
 $ ip -d link show | grep vxlan
 # Output: vxlan.calico ... (Presence usually implies Overlay)
 
@@ -606,8 +606,9 @@ Modern CNIs have CLI tools that tell you exactly how they are configured.
 
     ```bash
     $ kubectl -n kube-system exec -ti ds/cilium -- cilium status | grep -i "Tunnel"
-    # Output: "Routing: Network: Tunnel [vxlan] ..." (Overlay)
-    # Output: "Routing: Network: Native ..." (Direct Routing)
+    # Example outputs (varies by version):
+    # "Routing: Network: Tunnel [vxlan] ..." (Overlay)
+    # "Routing: Network: Native ..." (Direct Routing)
     ```
 
 * **Calico:** Check the `Installation` resource (if using the Operator) and `IPPool`.
@@ -626,7 +627,7 @@ $ tcpdump -i eth0 -n port 4789
 
 ### 4.2. The Enforcement Mechanism: iptables vs. eBPF
 
-This determines how Kubernetes Services and Network Policies are implemented in the Linux kernel. Before the packet even reaches the Pod, it must pass through this logic.
+This determines how Service virtual IP translation/load balancing and NetworkPolicy enforcement can be implemented on a node (iptables/IPVS vs eBPF, depending on the cluster). Before the packet even reaches the Pod, it must pass through this logic.
 
 1. **Services (NAT & Load Balancing):** The packet is destined for a Virtual **Cluster IP**. The kernel must intercept it and perform **DNAT** (Destination NAT) to translate the destination IP to a specific real Pod IP. *(We will cover this mechanics in detail in Part 3).*
 2. **Firewall (Network Policy):** The kernel checks if the source is allowed to talk to that destination.
@@ -671,7 +672,7 @@ graph LR
     end
 ```
 
-#### eBPF (Modern Standard)
+#### eBPF (Modern Approach)
 
 * **What:** The CNI loads custom, programmable logic directly into the kernel. It uses efficient hash maps to look up destinations instantly.
 * **Why:** Blazing fast at any scale and provides deep observability.
