@@ -24,6 +24,8 @@ I have a background in software development with experience in Java, Python, Jav
 
 I have a proven record of leading and delivering projects from inception to production, while focusing on continuously adding value. I achieve this by using a broad set of technologies and tools, while adopting an iterative incremental approach based on Agile and Scrum.
 
+<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="204e6152-5d15-4905-8382-5db4d541e39b" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
+<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="b8c1fa3f-da5b-453c-8384-2feaa7d4ceb4" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="49adf6db-8593-4dd8-b51a-7d18d14dd8c7" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="bab0a05a-5d88-4e2a-8bbb-dcd575a8ff15" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="f62e1087-63a1-4ec5-99ae-3b40daf67b58" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
