@@ -735,3 +735,11 @@ We’ll explore how **Services** and **kube-proxy** build on top of the CNI foun
 * **VXLAN:** [RFC 7348](https://datatracker.ietf.org/doc/html/rfc7348)
 * **IPIP:** [RFC 2003](https://datatracker.ietf.org/doc/html/rfc2003)
 * **BGP:** [RFC 4271](https://datatracker.ietf.org/doc/html/rfc4271)
+
+## Series Navigation
+
+| [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux namespaces. |
+| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
+| [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable virtual IPs and in-cluster load balancing. |
+| Part 4 | DNS | Name resolution and Service discovery. (Coming soon) |
+| Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
