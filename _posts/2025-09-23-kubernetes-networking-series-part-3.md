@@ -436,10 +436,9 @@ sequenceDiagram
 * **Kube-proxy:** [Reference](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-proxy/)
 * **IPVS vs. Iptables:** [Deep Dive Blog](https://kubernetes.io/blog/2018/07/09/ipvs-based-in-cluster-load-balancing-deep-dive/)
 * **Netfilter/Iptables:** [Project Homepage](https://netfilter.org/projects/iptables/index.html)
-* **IPVS:** [Linux Virtual Server](http://www.linuxvirtualserver.org/software/ipvs.html)
+* **IPVS:** [Official Documentation](https://kb.linuxvirtualserver.org/wiki/IPVS)
 * **Cilium:** [Kube-Proxy Replacement](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)
 * **Conntrack:** [Conntrack tools](https://conntrack-tools.netfilter.org/)
-* **IPVS Software:** [Official Site](http://www.linuxvirtualserver.org/software/ipvs.html)
 
 ## Summary
 
