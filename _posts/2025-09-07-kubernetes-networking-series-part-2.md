@@ -132,6 +132,7 @@ Every CNI plugin must satisfy these non-negotiable requirements:
 **Key Takeaway:** *How* this is done is up to the CNI (using bridges, routing, eBPF, etc.), but these outcomes must always be true.
 
 > **Codebase References:**
+
 * **CNI:** [containernetworking/cni](https://github.com/containernetworking/cni) - The Go library and specification for writing network plugins.
 * **CRI:** [kubernetes/cri-api](https://github.com/kubernetes/cri-api) - The definitions for the Container Runtime Interface, which triggers the CNI.
 {: .prompt-info }
@@ -707,7 +708,7 @@ $ cilium status | grep KubeProxyReplacement
 Understanding this universal pattern is crucial for the rest of our journey:
 
 * **Services (Part 3):** Services assume that Pods already have routable IPs. They build load balancing *on top* of this foundation.
-* **DNS (Part 4):** DNS relies on Services resolving to these reachable Pod IPs.
+* **DNS ([Part 4](/posts/kubernetes-networking-series-part-4/)):** DNS relies on Services resolving to these reachable Pod IPs.
 * **Debugging (Part 5):** Troubleshooting always starts at the Pod interface (`eth0`) and works outward. If the veth pair isn't working, nothing else matters.
 
 ## Summary
@@ -739,7 +740,7 @@ We’ll explore how **Services** and **kube-proxy** build on top of the CNI foun
 ## Series Navigation
 
 | [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux namespaces. |
-| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
+| **[Part 2](/posts/kubernetes-networking-series-part-2/)** | CNI & Pod Networking | How CNI plugins build the Pod network. |
 | [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable virtual IPs and in-cluster load balancing. |
-| Part 4 | DNS | Name resolution and Service discovery. (Coming soon) |
+| [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Name resolution and Service discovery. |
 | Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |

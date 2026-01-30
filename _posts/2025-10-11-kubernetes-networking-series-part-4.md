@@ -97,13 +97,22 @@ sequenceDiagram
     participant OS as OS Resolver
     participant DNS as CoreDNS (10.96.0.10)
 
+    Note over App, DNS: Scenario 1: Internal Short Name
     App->>OS: Resolve "backend"
-    
     Note over OS: 1. Append first search domain
     OS->>DNS: Query: backend.default.svc.cluster.local?
     DNS-->>OS: Response: A 10.96.5.20 (Success!)
-    
     OS-->>App: Return 10.96.5.20
+
+    Note over App, DNS: Scenario 2: External Domain (The ndots:5 Trap)
+    App->>OS: Resolve "google.com"
+    Note over OS: 1-3. Appends search domains (Failed attempts)
+    OS->>DNS: Query: google.com.default.svc.cluster.local?
+    DNS-->>OS: NXDOMAIN
+    Note over OS: 4. Finally try exact name
+    OS->>DNS: Query: google.com?
+    DNS-->>OS: Response: A 142.250.x.x
+    OS-->>App: Return 142.250.x.x
 ```
 
 If the first attempt fails (e.g., you are trying to reach `google.com`), the resolver continues down the list:
@@ -303,28 +312,32 @@ When DNS breaks, it's usually one of three things:
 Don't rely on your application container to debug. Run a dedicated debug pod with tools like `nslookup` and `dig`.
 
 ```bash
-# 1. Run a temporary debug pod
+# Run a temporary debug pod
 $ kubectl run -it --rm --restart=Never --image=infoblox/dnstools:latest dns-debug
+```
 
-# 2. Test resolving a Service (Short name)
+Once inside the pod, you can run your queries:
+
+```bash
+# Test resolving a Service (Short name)
 dnstools# nslookup my-service
 # Should return the ClusterIP
 
-# 3. Test resolving a Service (FQDN)
+# Test resolving a Service (FQDN)
 dnstools# nslookup my-service.default.svc.cluster.local
 
-# 4. Test external resolution
+# Test external resolution
 dnstools# nslookup google.com
 ```
 
 ## Summary
 
-* **CoreDNS** is the cluster's phonebook, translating names to IPs.
-* **`/etc/resolv.conf`** is injected by the Kubelet and controls the search path.
-* **Services** get DNS names automatically: `service.namespace.svc.cluster.local`.
-* **Standard Services** resolve to a stable ClusterIP.
-* **Headless Services** resolve directly to Pod IPs.
-* **`ndots:5`** can cause performance issues with external domains; use FQDNs (trailing dot) to optimize.
+* **The Cluster DNS Architecture:** CoreDNS acts as the cluster's phonebook, translating names to IPs.
+* **The Client Side:** The `/etc/resolv.conf` file is injected by the Kubelet and controls the search path inside the Pod.
+* **The Resolution Process:** The OS resolver iterates through search domains until it finds a match.
+* **Service Discovery Records:** Services resolve to a stable ClusterIP (Standard) or directly to Pod IPs (Headless).
+* **CoreDNS Performance and Scale:** `ndots:5` can cause latency; use FQDNs (trailing dots) or NodeLocal DNSCache to optimize.
+* **Debugging DNS:** Diagnose issues by checking Network Policies, CoreDNS health, and Service configuration.
 
 In **Part 5**, we will wrap up the series by looking at **Debugging**. We will learn how to use tools like `kubectl debug`, `tcpdump`, and `bpftrace` to see the actual packets flowing through the networking primitives we’ve built so far.
 
@@ -343,3 +356,11 @@ In **Part 5**, we will wrap up the series by looking at **Debugging**. We will l
 * **Namespaces:** [Official Documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
 * **Kubelet:** [Official Documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/)
 * **Debugging DNS:** [Kubernetes Guide](https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/)
+
+## Series Navigation
+
+| [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux namespaces. |
+| [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
+| [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable virtual IPs and in-cluster load balancing. |
+| **[Part 4](/posts/kubernetes-networking-series-part-4/)** | DNS | Name resolution and Service discovery. |
+| Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
