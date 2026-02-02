@@ -447,12 +447,12 @@ sequenceDiagram
 * **IPVS** is the high-performance alternative to iptables for large clusters.
 * **kube-proxy** is the agent that keeps these rules up to date on every node.
 
-In **Part 4**, we will look at how we find these Services by name using **DNS**, completing the mental model of how applications talk to each other.
+In [Part 4](/posts/kubernetes-networking-series-part-4/), we will look at how we find these Services by name using **DNS**, completing the mental model of how applications talk to each other.
 
 ## Series Navigation
 
 | [Part 1](/posts/kubernetes-networking-series-part-1/) | The Model | The IP-per-Pod model and Linux namespaces. |
 | [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
 | **[Part 3](/posts/kubernetes-networking-series-part-3/)** | Services | Stable virtual IPs and in-cluster load balancing. |
-| Part 4 | DNS | Name resolution and Service discovery. (Coming soon) |
+| [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Name resolution and Service discovery. |
 | Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
