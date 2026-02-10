@@ -339,7 +339,7 @@ dnstools# nslookup google.com
 * **CoreDNS Performance and Scale:** `ndots:5` can cause latency; use FQDNs (trailing dots) or NodeLocal DNSCache to optimize.
 * **Debugging DNS:** Diagnose issues by checking Network Policies, CoreDNS health, and Service configuration.
 
-In **Part 5**, we will wrap up the series by looking at **Debugging**. We will learn how to use tools like `kubectl debug`, `tcpdump`, and `bpftrace` to see the actual packets flowing through the networking primitives we’ve built so far.
+In [Part 5](/posts/kubernetes-networking-series-part-5/) we will wrap up the series by looking at **Debugging**. We will learn how to use tools like `kubectl debug`, `tcpdump`, and `bpftrace` to see the actual packets flowing through the networking primitives we’ve built so far.
 
 ## References
 
@@ -363,4 +363,4 @@ In **Part 5**, we will wrap up the series by looking at **Debugging**. We will l
 | [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
 | [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable virtual IPs and in-cluster load balancing. |
 | **[Part 4](/posts/kubernetes-networking-series-part-4/)** | DNS | Name resolution and Service discovery. |
-| Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
+| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Tracing packets and diagnosing network issues. |

@@ -221,6 +221,9 @@ There are two main modes for `kube-proxy`: **iptables** and **IPVS**.
 **What is iptables?**
 `iptables` is a user-space utility program that allows a system administrator to configure the IP packet filter rules of the Linux kernel firewall. It organizes rules into **Chains** and **Tables**.
 
+> **Note:** On modern Linux systems, iptables rules are typically implemented on top of nftables, but kube-proxy still operates in "iptables mode" conceptually. For more details, see the [official nftables documentation](https://netfilter.org/projects/nftables/).
+{: .prompt-info }
+
 In this mode, `kube-proxy` writes thousands of iptables rules to handle routing.
 
 **The Flow:**
@@ -279,6 +282,9 @@ Instead of using slow iptables rules or managing IPVS, eBPF programs run directl
 * **Constraint:** Kube-proxy replacement works only when the CNI owns the entire datapath — meaning it is responsible for Service load balancing, routing, and policy enforcement, rather than relying on iptables or IPVS.
 
 > **Reference:** [Cilium Kube-Proxy Replacement](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)
+
+> **Note:** In modern clusters using eBPF-based CNIs (like Cilium), `kube-proxy` is **optional**. Enabling "kube-proxy replacement" allows you to remove the `kube-proxy` DaemonSet entirely.
+{: .prompt-tip }
 
 ## Service Types
 
@@ -455,4 +461,4 @@ In [Part 4](/posts/kubernetes-networking-series-part-4/), we will look at how we
 | [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
 | **[Part 3](/posts/kubernetes-networking-series-part-3/)** | Services | Stable virtual IPs and in-cluster load balancing. |
 | [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Name resolution and Service discovery. |
-| Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
+| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Tracing packets and diagnosing network issues. |

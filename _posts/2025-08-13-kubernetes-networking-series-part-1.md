@@ -362,6 +362,7 @@ By enforcing this flat network model, Kubernetes decouples the application from 
 * **Simplicity for Apps:** Applications can be ported from VMs to Pods without changing their networking code. They bind to an IP and port, and they are reachable.
 * **Simplicity for Humans:** You don't need to maintain a spreadsheet of which port maps to which container.
 * **Standardization:** Because the rules are strict, you can swap out the underlying implementation (CNI) without breaking the application's connectivity.
+* **Security Boundaries:** By assigning a unique identity (IP) to every workload, the network can enforce fine-grained security policies. This is where Kubernetes networking enforces security boundaries, allowing administrators to define exactly which Pods can communicate.
 
 ## References
 
@@ -381,4 +382,4 @@ In [Part 2](/posts/kubernetes-networking-series-part-2/), we will dive into **CN
 | [Part 2](/posts/kubernetes-networking-series-part-2/) | CNI & Pod Networking | How CNI plugins build the Pod network. |
 | [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable virtual IPs and in-cluster load balancing. |
 | [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Name resolution and Service discovery. |
-| Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
+| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Tracing packets and diagnosing network issues. |
