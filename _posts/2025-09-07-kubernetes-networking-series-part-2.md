@@ -282,6 +282,13 @@ If the Pod-to-Node connection (the veth pair) is standard, where do the differen
 
 This determines how a packet from a Pod on Node A reaches a Pod on Node B.
 
+Up until now, the packet has lived inside the node's memory. But when the destination is on another server, the packet must hit the physical wire. **At this point, the packet leaves the node and crosses the underlay.**
+
+There are two primary ways CNIs handle this transit:
+
+1. **Overlay Networks (Encapsulation):** (e.g., VXLAN, Geneve, IPIP) The packet is wrapped inside a "node-to-node" packet. The physical network only sees traffic between nodes; it knows nothing about Pods.
+2. **Direct Routing (Native):** (e.g., BGP) The packet behaves like a normal packet on the network. The physical routers are taught how to route Pod IPs directly.
+
 #### 4.1.1. Overlay Networks (Encapsulation)
 
 * **What:** The CNI wraps the original Pod packet inside a Node packet (Encapsulation). It creates a "tunnel" over the physical network.
@@ -631,7 +638,7 @@ $ tcpdump -i eth0 -n port 4789
 This determines how a node implements Service virtual IP translation/load balancing and NetworkPolicy enforcement (iptables/IPVS vs eBPF, depending on the cluster). Before the packet even reaches the Pod, it must pass through this logic.
 
 1. **Services (NAT & Load Balancing):** The packet is destined for a virtual **ClusterIP**. The kernel must intercept it and perform **DNAT** (Destination NAT) to translate the destination IP to a specific real Pod IP. *(We will cover these mechanics in detail in Part 3).*
-2. **Firewall (Network Policy):** The kernel checks if the source is allowed to talk to that destination.
+2. **Firewall (Network Policy):** The kernel checks if the source is allowed to talk to that destination. This is where Kubernetes networking enforces security boundaries, preventing unauthorized traffic from ever reaching the application.
 
 ```mermaid
 graph LR
@@ -703,7 +710,33 @@ $ cilium status | grep KubeProxyReplacement
 # KubeProxyReplacement: Strict (eBPF is handling everything)
 ```
 
-## 5. Why This Abstraction Matters
+## 5. Egress: Leaving the Cluster
+
+So far, we have focused on traffic *inside* the cluster. But what happens when a Pod talks to the internet?
+
+### The Problem: Private IPs
+
+Your Pod IP (e.g., `10.244.1.5`) is private. It is not routable on the public internet. If a Pod sends a packet to `google.com` (8.8.8.8) with `Src: 10.244.1.5`, the packet might reach Google, but Google cannot reply. The internet routers do not know where `10.244.1.5` is or how to reach it.
+
+### The Solution: Masquerading (SNAT)
+
+When a routable packet leaves the cluster, it undergoes **Source Network Address Translation (SNAT)**, also known as **Masquerading**.
+
+1. **Pod sends:** `Src: 10.244.1.5` → `Dst: 8.8.8.8`
+2. **Node Routing:** The Node sees the destination is outside the cluster CIDR.
+3. **SNAT:** The Node (via `iptables` or CNI) rewrites the *Source IP* to the **Node's physical IP** (e.g., `192.168.1.10`).
+4. **Internet:** The external service sees traffic coming from the Node IP and replies to the Node.
+5. **Un-SNAT:** The Node receives the reply, remembers the connection, changes the specific packet's destination back to the Pod IP, and forwards it to the Pod.
+
+### Why This Matters
+
+This simple mechanism has major implications for operations:
+
+* **Cloud Firewalls:** If an external database has an IP allowlist, you must allow the **Node IPs**, not the Pod IPs.
+* **Identity:** To the outside world, all Pods on a node look like they are the Node itself.
+* **Performance:** Tracking every connection for SNAT (using `conntrack`) consumes CPU and memory. High churn applications can exhaust the ephemeral ports on the Node.
+
+## 6. Why This Abstraction Matters
 
 Understanding this universal pattern is crucial for the rest of our journey:
 
@@ -743,4 +776,4 @@ We’ll explore how **Services** and **kube-proxy** build on top of the CNI foun
 | **[Part 2](/posts/kubernetes-networking-series-part-2/)** | CNI & Pod Networking | How CNI plugins build the Pod network. |
 | [Part 3](/posts/kubernetes-networking-series-part-3/) | Services | Stable virtual IPs and in-cluster load balancing. |
 | [Part 4](/posts/kubernetes-networking-series-part-4/) | DNS | Name resolution and Service discovery. |
-| Part 5 | Debugging | Tracing packets and diagnosing network issues. (Coming soon) |
+| [Part 5](/posts/kubernetes-networking-series-part-5/) | Debugging | Tracing packets and diagnosing network issues. |
