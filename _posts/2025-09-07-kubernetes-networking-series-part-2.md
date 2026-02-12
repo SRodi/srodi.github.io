@@ -13,7 +13,7 @@ image:
 
 In [Part 1](/posts/kubernetes-networking-series-part-1/), we established the **Model**: the "Golden Rules" of Kubernetes networking. Before exploring *how* connections are made, let's briefly revisit these fundamental design principles. Kubernetes departs from traditional host networking (where ports are mapped to the host IP) to simplify application migration and service discovery.
 
-1. **Every Pod gets its own IP**: Unlike Docker’s default model where containers share the host IP and use dynamic ports, Kubernetes treats Pods like distinct VMs on the network. This means applications can run on well-known ports (like 80 or 443) without conflict, regardless of which node they land on.
+1. **Every Pod gets its own IP**: Unlike Docker’s default bridge networking, where containers typically rely on port mappings (NAT) to the host IP for external access, Kubernetes treats Pods like distinct VMs on the network. This means applications can bind to well-known ports (like 80 or 443) without conflict, regardless of which node they land on.
 
 2. **Pod-to-Pod communication without NAT**: The network must be flat. A Pod on Node A can reach a Pod on Node B directly using its IP address. The IP address the sender sees and uses is the exact same IP address the receiver sees as its own. The model assumes Pod IPs are directly reachable (no NAT for pod-to-pod traffic).
 
