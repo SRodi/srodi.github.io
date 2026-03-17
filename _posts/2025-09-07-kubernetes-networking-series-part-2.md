@@ -131,10 +131,9 @@ Every CNI plugin must satisfy these non-negotiable requirements:
 
 **Key Takeaway:** *How* this is done is up to the CNI (using bridges, routing, eBPF, etc.), but these outcomes must always be true.
 
-> **Codebase References:**
-
-* **CNI:** [containernetworking/cni](https://github.com/containernetworking/cni) - The Go library and specification for writing network plugins.
-* **CRI:** [kubernetes/cri-api](https://github.com/kubernetes/cri-api) - The definitions for the Container Runtime Interface, which triggers the CNI.
+> Codebase References:
+* CNI: [containernetworking/cni](https://github.com/containernetworking/cni) - The Go library and specification for writing network plugins.
+* CRI: [kubernetes/cri-api](https://github.com/kubernetes/cri-api) - The definitions for the Container Runtime Interface, which triggers the CNI.
 {: .prompt-info }
 
 ## 2. The Universal Pod Networking Pattern
@@ -149,32 +148,34 @@ Regardless of which CNI you use, the way a Pod connects to its Node is almost al
 **Nearly every CNI uses this pattern.** The differences only start *after* the packet leaves the node side of the veth pair.
 
 ```mermaid
-graph TB
-    subgraph Node ["Worker Node"]
-        
-        subgraph HostNS ["Host Network Namespace"]
-            NodeEth["Gateway (example)<br>10.244.1.1"]
-            CNI_Mechanism["CNI Integration<br>(Bridge, Routing, eBPF)"]
-            Veth_Host["veth7382"]
-        end
-
-        subgraph PodNS ["Pod Network Namespace"]
-            Eth0_Pod["eth0 (10.244.1.5)"]
-        end
-
-        %% Wiring
-        NodeEth --- CNI_Mechanism
-        CNI_Mechanism --- Veth_Host
-        Veth_Host -- "Virtual Cable" --- Eth0_Pod
+graph LR       
+    subgraph HostNS ["Host netns"]
+        NodeEth["Node Gateway <br>(10.244.1.1)"]
+        CNI_Mechanism["host routing<br>(iptables/eBPF)"]
+        Veth_Host["veth (host-side)"]
     end
 
-    style Node fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#333
-    style HostNS fill:#fff,stroke:#666,stroke-width:2px,color:#333,stroke-dasharray: 5 5
-    style PodNS fill:#fff,stroke:#666,stroke-width:2px,color:#333,stroke-dasharray: 5 5
+    subgraph PodNS ["Pod netns"]
+        Eth0_Pod["veth (pod-side/eth0)"]
+    end
 
-    classDef component fill:#333,stroke:#333,stroke-width:2px,color:#fff
-    class NodeEth,CNI_Mechanism,Veth_Host,Eth0_Pod component
+    %% Wiring
+    NodeEth <---> CNI_Mechanism
+    CNI_Mechanism <---> Veth_Host
+    Veth_Host <-- "veth pair<br><i><small>(veth = virtual cable)</small></i>" --> Eth0_Pod
+    %% Highlight the packet flow
+    linkStyle 0,1,2 stroke:#ff5555,stroke-width:4px;
 ```
+
+### Why is "Bridge / Routing / eBPF" between the Gateway and the veth-host?
+
+The diagram above is a **conceptual representation** of the network logic rather than a strict physical map. The box labeled `"Bridge / Routing / eBPF"` represents the **decision engine** or the **glue** that the CNI configures to move packets from the isolated `veth` into the host's broader networking stack.
+
+Depending on the specific CNI you use, the "Gateway IP" and the "veth-host" might be separated by a bridge, or they might physically collapse into a single interface. Here is how that "middle box" translates to reality across the three main paradigms:
+
+* **Bridge Mode (e.g., Flannel, Docker default):** The `veth-host` is just a dumb wire. It has no IP address assigned to it. The "mechanism" is a virtual switch (a Linux Bridge, usually named `cni0`). The Gateway IP (`10.244.1.1`) is assigned to the **bridge interface itself** (`cni0`), not the veth.
+* **Routing Mode (e.g., Calico):** There is no virtual switch. Calico often assigns the gateway IP directly to the host-side veth. Visually in a terminal, the "Gateway" and "veth-host" are physically the same interface. Logically, the **Linux Kernel Routing Table and Proxy ARP** act as the middlebox. When the Pod asks where its gateway is, the host answers using Proxy ARP.
+* **eBPF Mode (e.g., Cilium):** Standard networking is largely bypassed. The "mechanism" is an eBPF program attached directly to the `veth-host` interface. It intercepts the packet exactly as it pops out of the `veth-host`, bypassing the host's standard routing table entirely and forwarding it to its destination.
 
 ### See it in action
 
@@ -208,24 +209,26 @@ Let's walk through the generic lifecycle of a Pod's network setup. This happens 
 ```mermaid
 %%{init: {'sequence': {'mirrorActors': false}}}%%
 sequenceDiagram
-    participant S as Scheduler
     participant K as Kubelet
     participant CR as Container Runtime
     participant C as CNI Plugin
     participant P as Pod Network
 
-    S->>K: 1. Schedule (via API Server)
-    K->>CR: 2. Create Pod Sandbox
-    CR->>P: 3. Create Network Namespace
-    CR->>C: 4. Call CNI ADD
+    K->>CR: 1. Create Pod Sandbox
+    rect rgba(255, 0, 0, 0.1)
+    CR->>P: 2. Create Network Namespace (via pause container)
+    end
+    CR->>C: 3. Call CNI ADD
     activate C
-    C->>P: 5a. Create veth pair
-    C->>P: 5b. Assign IP Address
-    C->>P: 5c. Setup Routes
-    C-->>CR: 6. Return Success
+    rect rgba(255, 0, 0, 0.1)
+    C->>P: 4a. Create veth pair
+    C->>P: 4b. Assign IP Address (via IPAM)
+    C->>P: 4c. Setup Routes
+    end
+    C-->>CR: 5. Return Success
     deactivate C
-    CR-->>K: 7. Sandbox Ready
-    K->>CR: 8. Start App Container
+    CR-->>K: 6. Sandbox Ready
+    K->>CR: 7. Start App Container
 ```
 
 1. **Pod Scheduled:** The scheduler assigns a Pod to a Node.

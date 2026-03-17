@@ -131,18 +131,42 @@ ip route show
 
 **What to look for:**
 
-* **Default Route:** You should see a line like `default via 10.244.1.1`. The IP address (`10.244.1.1` in this example) is your **Gateway IP**.
+* **Default Route:** You should see a line like `default via 10.244.0.1 dev eth0`.
+  * In many CNIs, this gateway IP is **not** a single bridge address shared by the node. It is the **peer endpoint for that Pod's veth connection** (inside the Pod namespace).
+  * Because each Pod has its own isolated network namespace, multiple host-side `veth*` interfaces can reuse the same gateway IP (often as `/32`) without conflict.
 * **Missing Route:** If the default route is missing, the Pod can only talk to its own subnet.
 
 **Verification on the Node:**
 
-You can verify that this gateway exists on the host. SSH into the Node where the Pod is running and check the interfaces using the IP you found above:
+You can verify this from the host, but seeing the same gateway IP on many `veth*` interfaces is expected in this model.
+
+If this is your first node-level check in this guide, see **Section 5 (Advanced Debugging / Node Level)** for how to open a node debug shell with `kubectl debug node/...` before running the commands below.
+
+To find the **exact host-side veth** for your Pod:
+
+```bash
+# In the Pod (or ephemeral container sharing the Pod netns)
+cat /sys/class/net/eth0/iflink
+# Prints the host peer ifindex directly (example: 123)
+
+# Alternative view with interface details:
+ip link show eth0
+# Example output: 2: eth0@if123: ...
+# The number after '@if' (123) is the peer ifindex on the host.
+```
+
+Then on the Node:
 
 ```bash
 # On the Node
-ip addr show | grep <GATEWAY_IP>
-# You should see an interface (e.g., cni0, cilium_host) with this IP.
+ip link show | grep '^123:'
+# This gives the host-side veth name (for example, veth9a1bfd38).
+
+# Optional: confirm addresses on that host veth
+ip addr show dev <HOST_VETH>
 ```
+
+If your CNI uses a bridge model, the Pod default gateway may instead be the bridge interface IP (for example `cni0`), so interface names and addressing patterns can differ by CNI.
 
 **How to Fix:**
 
@@ -160,12 +184,12 @@ nslookup my-service.default.svc.cluster.local
 
 * **Success:** Returns an IP (e.g., `10.96.0.100`).
 * **Failure (NXDOMAIN):** The name doesn't exist. Check your spelling or Namespace.
-* **Failure (Timeout):** The DNS server (`10.96.0.10`) is unreachable.
+* **Failure (Timeout / Connection Refused):** The DNS service (`10.96.0.10`) is not reachable or has no healthy backend pods.
 
 **How to Fix:**
 
 * **NXDOMAIN:** Verify the Service exists (`kubectl get svc`). Ensure you are using the correct namespace format (`service.namespace`).
-* **Timeout:** Check if CoreDNS pods are running (`kubectl get pods -n kube-system -l k8s-app=kube-dns`). Check for NetworkPolicies that might block UDP port 53.
+* **Timeout / Connection Refused:** Check if CoreDNS pods are running (`kubectl get pods -n kube-system -l k8s-app=kube-dns`) and that the `kube-dns` Service has endpoints (`kubectl get endpoints -n kube-system kube-dns`). Also check for NetworkPolicies that might block UDP/TCP port 53.
 
 ### 2. Check `/etc/resolv.conf`
 
