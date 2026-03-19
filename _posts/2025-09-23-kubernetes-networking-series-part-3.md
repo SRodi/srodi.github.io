@@ -175,13 +175,12 @@ graph LR
 
 ### The Glue: Conntrack
 
-You might wonder: "If the destination IP is changed from the Service IP to the Pod IP, how does the Pod know how to reply?"
+You might wonder: "If the destination IP is changed from the Service IP to the Pod IP, how does the response get back correctly?"
 
-The answer is **conntrack** (Connection Tracking).
+The answer is conntrack (Connection Tracking).
+The Linux kernel tracks every connection and records any NAT transformations. When DNAT occurs (Service IP → Pod IP), conntrack stores that mapping.
 
-The Linux kernel tracks every connection passing through it. When the DNAT happens, `conntrack` makes a note: "I changed packet X destined for 10.96.0.100 to 10.244.1.5".
-
-When the Pod replies, it sends a packet back to the Client. The kernel sees this reply, looks up its table, and reverses the translation (SNAT). It changes the Source IP from the Pod IP back to the Service IP.
+When the Pod replies, it simply responds to the source IP it sees. The kernel then consults conntrack and automatically applies the reverse NAT transformations, ensuring the response is routed back correctly to the client.
 
 ### See it in action
 
