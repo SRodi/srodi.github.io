@@ -6,23 +6,55 @@ order: 4
 
 # Simone Rodigari
 
-I am a Software engineer specialised in DevOps, with extensive experience in cloud, having built infrastructure on Azure, AWS, GCP, IBM Cloud, and other public cloud providers. I am currently focused on Kubernetes, Cilium, Go, and eBPF.
+I am a software engineer focused on cloud native infrastructure, Kubernetes networking, observability, and eBPF.
 
-My expertise includes IaC technologies and in particular Terraform and Pulumi. I am an open source contributor, part of Microsoft, Kubernetes and Istio organisations. I am certified in Kubernetes holding CKA and CKS certifications.
+Over the past years I have worked across Azure, AWS, GCP, IBM Cloud, and other large scale distributed environments, building and operating production platforms with a strong focus on automation, reliability, scalability, and performance.
 
-I have a BSc(Hons) in Software Development and a MSc in Research (Cloud Native Performance and Security). I was the leading author of cited paper [Performance Analysis of Zero-Trust multi-cloud](https://ieeexplore.ieee.org/document/9582229) presented at IEEE CLOUD 2021, where I analyzed the performance impact of a service-mesh with a side-car + kube-proxy VS side-car + eBPF dataplane. I have also published a number of articles on my personal blog, Kubernetes blog and medium.
+Today my work is primarily centered around Kubernetes, Cilium, Go, and eBPF. At Microsoft I work on Retina, the open source Kubernetes networking observability platform, and on Cilium powered networking capabilities for Azure Kubernetes Service (AKS) as part of Advanced Container Networking Services (ACNS).
 
-I am Currently working on Retina Open Source Kubernetes Networking Observability solution based on eBPF, and Cilium managed offering as part of Advanced Container Networking Services (ACNS) on Azure AKS. In April 2025 I published an article on Microsoft's Linux and Open Source Blog: [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361), the article was based on a demo I presented with colleagues at the Microsoft AKS booth during KubeCon 2025.
+I regularly contribute to open source projects and communities across the Microsoft, Kubernetes, and Cilium ecosystems. I also write technical content and speak publicly about Kubernetes networking, observability, and cloud native infrastructure.
+
+In 2026 I presented at KubeCon Europe with the session:
+
+**Demystifying the Kubernetes Network Stack: From Pod to Pod**
+
+{% include embed/youtube.html id='fj5UQ0WBmAg' %}
+
+During KubeCon I was also interviewed by Azure Italia to discuss Kubernetes, networking, observability, open source, and the wider cloud native ecosystem:
+
+- [Azure Italia Podcast](https://open.spotify.com/episode/0EVgudMujjjiWq2ppTSAsO)
+
+One of my recent Microsoft articles explores multi cloud observability with Retina and eBPF:
+
+- [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361)
+
+I also wrote about scaling DNS performance and policy enforcement on AKS using Cilium technologies such as NodeLocal DNSCache, Local Redirect Policy (LRP), and FQDN policies:
+
+- [Scaling DNS on AKS with Cilium, NodeLocal DNSCache, LRP and FQDN Policies](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/scaling-dns-on-aks-with-cilium-nodelocal-dnscache-lrp-and-fqdn-policies/4486323)
+
+
+I hold a BSc (Hons) in Software Development and a MSc by Research focused on Cloud Native Performance and Security.
+
+I was the lead author of the IEEE CLOUD 2021 paper:
+
+- [Performance Analysis of Zero-Trust Multi-Cloud](https://ieeexplore.ieee.org/document/9582229)
+
+The research analyzed the performance impact of service mesh architectures comparing traditional sidecar and kube-proxy based networking against eBPF driven dataplanes.
 
 I have also presented Retina OSS at the eCHO LiveStream hosted by [Liz Rice](https://www.lizrice.com/).
 
 {% include embed/youtube.html id='dMyb54xUSL8' %}
 
-In my previous role I lead a number of projects in IBM Cloud for VMware solutions including the Infra automation for the control plane on a multi zone region deployment, production tools including secrets migrations, production artifacts sync process, and a Kubernetes Operator with three controlles to automate Secrets rotation, including the integration with Cloud Secret Manager.
+Before Microsoft, I worked on IBM Cloud for VMware Solutions where I led projects focused on infrastructure automation, multi region deployments, Kubernetes operators, secret rotation systems, and production platform tooling.
 
-I have a background in software development with experience in Java, Python, JavaScript and now focusing primarily in Go. Over the past 6 years I worked in production with Jenkins, GitLab CI/CD, TravisCI, Atlantis, Tekton, GitHub Actions, IBM Cloud Schematics, Toolchain and Azure DevOps. I am curious, adaptable and focused on growing together with the team. I enjoy mentoring and working in diverse teams. I believe knowledge sharing and good communication are essential for growth.
+My background spans software engineering, platform engineering, and DevOps, with hands on experience across Go, Java, Python, JavaScript, Terraform, Pulumi, GitHub Actions, Tekton, Jenkins, GitLab CI/CD, Atlantis, and Azure DevOps.
 
-I have a proven record of leading and delivering projects from inception to production, while focusing on continuously adding value. I achieve this by using a broad set of technologies and tools, while adopting an iterative incremental approach based on Agile and Scrum.
+I enjoy building systems from first principles, simplifying operational complexity, mentoring engineers, and sharing knowledge through talks, blogs, and open source contributions.
+
+## Certifications
+
+- Certified Kubernetes Administrator (CKA)
+- Certified Kubernetes Security Specialist (CKS)
 
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="204e6152-5d15-4905-8382-5db4d541e39b" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="b8c1fa3f-da5b-453c-8384-2feaa7d4ceb4" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
