@@ -369,13 +369,11 @@ done
 Open a TCP connection without completing an HTTP request, then inspect it:
 
 ```bash
-kubectl -n socket-lb-demo exec client -- sh -c \
-    'nc echo 8080 >/dev/null & echo $! >/tmp/socket-lb-nc.pid'
-
-kubectl -n socket-lb-demo exec client -- ss -tnp
+kubectl -n socket-lb-demo exec client -- bash -c \
+    'exec 3<>/dev/tcp/echo/8080; ss -tnp; exec 3>&-'
 ```
 
-With full socket LB active, `ss` should show a remote **backend Pod IP**, not the Service ClusterIP. DNS still resolved `echo` to the Service VIP; the socket hook performed the subsequent rewrite.
+With full socket LB active for the client Pod, `ss` should show a remote **backend Pod IP**, not the Service ClusterIP. DNS still resolved `echo` to the Service VIP; the socket hook performed the subsequent rewrite. If `ss` shows the ClusterIP instead, verify that `cilium-dbg status --verbose` reports `Socket LB: Enabled` and that socket LB is not restricted to the host namespace.
 
 ### 4. Inspect Cilium's eBPF State
 
