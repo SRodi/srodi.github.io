@@ -335,7 +335,7 @@ kubectl create namespace socket-lb-demo
 
 kubectl -n socket-lb-demo create deployment echo \
     --image=registry.k8s.io/e2e-test-images/agnhost:2.53 \
-    --replicas=2 -- netexec --http-port=8080
+    --replicas=2 -- /agnhost netexec --http-port=8080
 
 kubectl -n socket-lb-demo expose deployment echo \
     --name=echo --port=8080 --target-port=8080
