@@ -316,7 +316,7 @@ Setting `socketLB.hostNamespaceOnly=true` bypasses socket LB in Pod namespaces. 
 
 ## Validate Socket LB on a Cilium Cluster
 
-This test requires a Linux cluster running Cilium with kube-proxy replacement. It creates two HTTP backends, opens a persistent TCP connection to their Service, and inspects the destination Linux actually connected to.
+This test requires a Linux cluster running Cilium with socket LB enabled for Pod namespaces. It creates two HTTP backends, opens a persistent TCP connection to their Service, and inspects the destination Linux actually connected to.
 
 ### 1. Confirm Cilium's Configuration
 
@@ -326,7 +326,51 @@ kubectl -n kube-system exec ds/cilium -- cilium-dbg config --all \
     | grep -E 'KubeProxyReplacement|bpf-lb-sock|SocketLB'
 ```
 
-Diagnostic labels can change between releases. The status should report kube-proxy replacement, and socket LB must not be restricted away from the client Pod namespace.
+Diagnostic labels can change between releases. The status must report `Socket LB: Enabled`, and socket LB must not be restricted to the host namespace.
+
+An installation created with the Cilium CLI is Helm-backed. Prefer `cilium upgrade` when continuing to manage it with that CLI, and pin the currently installed chart version so this configuration change does not also upgrade Cilium:
+
+```bash
+CILIUM_VERSION=$(cilium status --output json \
+    | jq -r '.helm_chart_version')
+
+cilium upgrade \
+    --version "$CILIUM_VERSION" \
+    --reuse-values \
+    --set socketLB.enabled=true \
+    --set socketLB.hostNamespaceOnly=false \
+    --restart \
+    --wait
+
+cilium status --wait
+```
+
+For an installation managed directly with Helm, the equivalent procedure is:
+
+```bash
+CILIUM_VERSION=$(helm -n kube-system list \
+    --filter '^cilium$' --no-headers | awk '{print $NF}')
+
+helm repo add cilium https://helm.cilium.io/
+helm repo update cilium
+
+helm upgrade cilium cilium/cilium \
+    --namespace kube-system \
+    --version "$CILIUM_VERSION" \
+    --reuse-values \
+    --set socketLB.enabled=true \
+    --set socketLB.hostNamespaceOnly=false \
+    --set rollOutCiliumPods=true
+
+kubectl -n kube-system rollout status daemonset/cilium
+kubectl -n kube-system exec ds/cilium -- \
+    cilium-dbg status --verbose \
+    | grep -E 'KubeProxyReplacement|Socket LB|Socket LB Coverage'
+```
+
+`socketLB.hostNamespaceOnly=false` is important for this test: setting it to `true` deliberately bypasses socket LB for ordinary Pods. If Cilium was installed by another lifecycle manager, apply the equivalent values through that manager rather than editing `cilium-config` directly.
+
+Socket LB can be enabled independently, while Cilium's full kube-proxy replacement depends on socket LB. If the goal is also to replace kube-proxy, set `kubeProxyReplacement=true` through the installation manager and follow Cilium's kube-proxy-free migration procedure. Do not blindly enable it on a live cluster that still runs kube-proxy: the two implementations maintain independent NAT state, existing connections can break during the transition, and Cilium must have a directly reachable Kubernetes API server configured before kube-proxy is removed.
 
 ### 2. Create the Test Workloads
 
