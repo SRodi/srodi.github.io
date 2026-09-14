@@ -489,11 +489,11 @@ The LB listing confirms that the Service and its backends are present in the nod
 
 ```bash
 kubectl -n kube-system exec "$CILIUM_POD" -- \
-    bpftool cgroup tree /run/cilium/cgroupv2 effective \
-    | grep -E 'connect[46]|sendmsg[46]|recvmsg[46]|getpeername[46]'
+    bpftool cgroup show /run/cilium/cgroupv2 \
+    | grep -E 'cil_sock([46]_(connect|sendmsg|recvmsg|getpeername)|_release)'
 ```
 
-This confirms effective program attachment at the node's cgroup root; it does not identify an individual application socket. The following bounded test captures three views of the same live connection:
+This lists the Cilium programs directly attached to the node's cgroup root. The attach types use kernel names such as `cgroup_inet4_connect` and `cgroup_udp4_sendmsg`, while the final column contains Cilium names such as `cil_sock4_connect`. It confirms attachment, but it does not identify an individual application socket. The following bounded test captures three views of the same live connection:
 
 1. `ss` in the client network namespace shows the kernel peer address.
 2. A before/during diff shows the new socket reverse-NAT entry.
