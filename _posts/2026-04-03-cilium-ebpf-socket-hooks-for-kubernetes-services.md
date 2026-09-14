@@ -377,25 +377,63 @@ With full socket LB active for the client Pod, `ss` should show a remote **backe
 
 ### 4. Inspect Cilium's eBPF State
 
+Cilium's service and socket maps are node-scoped. Select the Cilium agent on the node that hosts the client Pod so the map and cgroup state correspond to the connection being tested:
+
 ```bash
+CLIENT_NODE=$(kubectl -n socket-lb-demo get pod client \
+    -o jsonpath='{.spec.nodeName}')
+
+CILIUM_POD=$(kubectl -n kube-system get pod \
+    -l k8s-app=cilium \
+    --field-selector "spec.nodeName=${CLIENT_NODE}" \
+    -o jsonpath='{.items[0].metadata.name}')
+
 SERVICE_IP=$(kubectl -n socket-lb-demo get service echo \
     -o jsonpath='{.spec.clusterIP}')
 
-kubectl -n kube-system exec ds/cilium -- cilium-dbg bpf lb list \
-    | grep -A4 "$SERVICE_IP"
+printf 'client node: %s\ncilium pod: %s\nservice IP: %s\n' \
+    "$CLIENT_NODE" "$CILIUM_POD" "$SERVICE_IP"
 ```
 
-On the node hosting the client, a privileged shell can inspect cgroup attachments and maps directly:
+First confirm the feature state and inspect the Service frontend and backend entries programmed on that node:
 
 ```bash
-sudo bpftool cgroup tree /sys/fs/cgroup effective \
-    | grep -E 'connect[46]|sendmsg[46]|recvmsg[46]|getpeername[46]'
+kubectl -n kube-system exec "$CILIUM_POD" -- \
+    cilium-dbg status --verbose \
+    | grep -E 'KubeProxyReplacement|Socket LB'
 
-sudo bpftool map list \
-    | grep -E 'cilium_lb[46]_(services|reverse_sk)|cilium_ct'
+kubectl -n kube-system exec "$CILIUM_POD" -- \
+    cilium-dbg bpf lb list \
+    | grep -F "$SERVICE_IP"
+
+kubectl -n kube-system exec "$CILIUM_POD" -- \
+    cilium-dbg map list \
+    | grep -E 'cilium_lb[46]_(services|backends|reverse_sk)'
 ```
 
-Program and map names may be truncated or vary by Cilium version. Use `bpftool -j` when consuming the output programmatically.
+The LB listing confirms that the Service and its backends are present in the node's maps; by itself, it does not prove that this connection used socket LB. When socket LB is enabled, the agent Pod can also inspect the cgroup programs attached on its node:
+
+```bash
+kubectl -n kube-system exec "$CILIUM_POD" -- \
+    bpftool cgroup tree /run/cilium/cgroupv2 effective \
+    | grep -E 'connect[46]|sendmsg[46]|recvmsg[46]|getpeername[46]'
+```
+
+Finally, keep a connection open briefly and inspect the socket reverse-NAT map while it is active:
+
+```bash
+kubectl -n socket-lb-demo exec client -- bash -c \
+    'exec 3<>/dev/tcp/echo/8080; sleep 5' &
+SOCKET_HOLDER_PID=$!
+
+sleep 1
+kubectl -n kube-system exec "$CILIUM_POD" -- \
+    cilium-dbg bpf socknat list
+
+wait "$SOCKET_HOLDER_PID"
+```
+
+An active socket-LB connection should add a `Backend -> Frontend` entry that maps the selected Pod backend back to the Service address. A header with no entries means there was no socket reverse-NAT state at the time of inspection; verify that socket LB is enabled, applies inside Pod namespaces, and that the connection remained open. Service maps are normally populated on every Cilium node, so another agent may show the LB entries, but the client-node agent is the correct target for connection-specific cgroup and socket state.
 
 Clean up when finished:
 
