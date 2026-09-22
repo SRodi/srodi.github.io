@@ -24,6 +24,10 @@ During KubeCon I was also interviewed by Azure Italia to discuss Kubernetes, net
 
 - [Azure Italia Podcast](https://open.spotify.com/episode/0EVgudMujjjiWq2ppTSAsO)
 
+I was also interviewed by De Nederlandse Kubernetes Podcast to discuss Kubernetes networking, observability, and troubleshooting.
+
+{% include embed/youtube.html id='Di924B425Fc' %}
+
 One of my recent Microsoft articles explores multi cloud observability with Retina and eBPF:
 
 - [eBPF-Powered Observability Beyond Azure: A Multi-Cloud Perspective with Retina](https://techcommunity.microsoft.com/blog/linuxandopensourceblog/ebpf-powered-observability-beyond-azure-a-multi-cloud-perspective-with-retina/4403361)
