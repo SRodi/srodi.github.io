@@ -57,9 +57,12 @@ I enjoy building systems from first principles, simplifying operational complexi
 
 ## Certifications
 
-- Certified Kubernetes Administrator (CKA)
-- Certified Kubernetes Security Specialist (CKS)
+- KubeCon Speaker
+- Kubernetes Operators Decelopment
+- Kubernetes Administrator (CKA)
+- Kubernetes Security Specialist (CKS)
 
+<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="24c20405-71e6-46d9-8f8e-d11fa38d59de" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="204e6152-5d15-4905-8382-5db4d541e39b" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="b8c1fa3f-da5b-453c-8384-2feaa7d4ceb4" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
 <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="49adf6db-8593-4dd8-b51a-7d18d14dd8c7" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="https://cdn.credly.com/assets/utilities/embed.js"></script>
