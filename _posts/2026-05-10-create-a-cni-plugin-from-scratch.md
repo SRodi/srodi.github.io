@@ -707,10 +707,12 @@ The nodes remain `NotReady`. That is expected: there is no CNI configuration yet
 
 ```bash
 kubectl get nodes
+kubectl get nodes \
+  -o custom-columns=NAME:.metadata.name,PODCIDR:.spec.podCIDR
 kubectl taint node cni-lab-worker cni-plugin-stage=static:NoSchedule
 ```
 
-The extra taint reserves the worker for the fixed-address experiment. Without it, controllers such as CoreDNS or `local-path-provisioner` could create Pod sandboxes as soon as the worker becomes `Ready`. Every sandbox created with the static configuration would receive `10.244.2.2`, and changing the CNI file later would not update those running Pods.
+The extra taint reserves the worker for the fixed-address experiment. Without it, controllers such as CoreDNS or `local-path-provisioner` could create Pod sandboxes as soon as the worker becomes `Ready`. Every sandbox created with the static configuration would receive `10.244.1.2`, and changing the CNI file later would not update those running Pods.
 
 Install our binary on both nodes:
 
@@ -768,7 +770,7 @@ cat > 10-cni-plugin-worker.conf <<'EOF'
   "ipam": {
     "type": "static",
     "addresses": [
-      {"address": "10.244.2.2/24", "gateway": "10.244.2.1"}
+      {"address": "10.244.1.2/24", "gateway": "10.244.1.1"}
     ],
     "routes": [
       {"dst": "0.0.0.0/0"}
@@ -797,7 +799,7 @@ kubectl exec fixed-ip -- ip route
 
 <!-- markdownlint-enable MD010 -->
 
-The Pod has `10.244.2.2/24`, and its default route points to `10.244.2.1`. On the node, the bridge owns that gateway and the host-side veth is attached to it:
+The Pod has `10.244.1.2/24`, and its default route points to `10.244.1.1`. On the node, the bridge owns that gateway and the host-side veth is attached to it:
 
 ```bash
 docker exec cni-lab-worker ip -4 address show dev cni0
@@ -827,7 +829,7 @@ cat > 10-cni-plugin-control-plane.conf <<'EOF'
   "ipam": {
     "type": "host-local",
     "ranges": [[
-      {"subnet": "10.244.1.0/24", "gateway": "10.244.1.1"}
+      {"subnet": "10.244.0.0/24", "gateway": "10.244.0.1"}
     ]],
     "routes": [
       {"dst": "0.0.0.0/0"}
@@ -846,7 +848,7 @@ cat > 10-cni-plugin-worker.conf <<'EOF'
   "ipam": {
     "type": "host-local",
     "ranges": [[
-      {"subnet": "10.244.2.0/24", "gateway": "10.244.2.1"}
+      {"subnet": "10.244.1.0/24", "gateway": "10.244.1.1"}
     ]],
     "routes": [
       {"dst": "0.0.0.0/0"}
@@ -880,7 +882,7 @@ kubectl get pods -o wide
 docker exec cni-lab-worker find /var/lib/cni/networks/cni-plugin -maxdepth 1 -type f -print
 ```
 
-Each Pod now receives a unique address from `10.244.2.0/24`.
+Each Pod now receives a unique address from `10.244.1.0/24`.
 
 ## 5. Same-Node Pod-to-Pod Communication
 
@@ -890,10 +892,10 @@ No new code or configuration is required. Both host-side veth interfaces are bri
 flowchart LR
     subgraph Worker [Worker node]
         subgraph A [pod-a netns]
-            AE[eth0<br>10.244.2.2]
+            AE[eth0<br>10.244.1.2]
         end
         subgraph B [pod-b netns]
-            BE[eth0<br>10.244.2.3]
+            BE[eth0<br>10.244.1.3]
         end
         AE <-->|veth| BR[cni0<br>Linux bridge]
         BR <-->|veth| BE
@@ -939,8 +941,8 @@ The kind nodes already share a Docker network. We can use each node's Docker-net
 CONTROL_PLANE_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' cni-lab-control-plane)
 WORKER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' cni-lab-worker)
 
-docker exec cni-lab-control-plane ip route replace 10.244.2.0/24 via "$WORKER_IP"
-docker exec cni-lab-worker ip route replace 10.244.1.0/24 via "$CONTROL_PLANE_IP"
+docker exec cni-lab-control-plane ip route replace 10.244.1.0/24 via "$WORKER_IP"
+docker exec cni-lab-worker ip route replace 10.244.0.0/24 via "$CONTROL_PLANE_IP"
 docker exec cni-lab-control-plane sysctl -w net.ipv4.ip_forward=1
 docker exec cni-lab-worker sysctl -w net.ipv4.ip_forward=1
 ```
@@ -951,15 +953,15 @@ The packet path is now:
 
 ```mermaid
 flowchart LR
-    PA[pod-a<br>10.244.2.x] --> WB[cni0<br>10.244.2.1]
+    PA[pod-a<br>10.244.1.x] --> WB[cni0<br>10.244.1.1]
     subgraph W [Worker node]
-        WB --> WR[Route to<br>10.244.1.0/24]
+        WB --> WR[Route to<br>10.244.0.0/24]
     end
-    WR -->|kind Docker network| CR[Route to<br>10.244.1.0/24]
+    WR -->|kind Docker network| CR[Route to<br>10.244.0.0/24]
     subgraph C [Control-plane node]
-        CR --> CB[cni0<br>10.244.1.1]
+        CR --> CB[cni0<br>10.244.0.1]
     end
-    CB --> PC[pod-c<br>10.244.1.x]
+    CB --> PC[pod-c<br>10.244.0.x]
 ```
 
 Verify both directions:
