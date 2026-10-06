@@ -68,6 +68,7 @@ The [CNI specification](https://www.cni.dev/docs/spec/) also requires repeated `
 Creating interfaces and allocating addresses are different jobs. The CNI specification defines **IPAM delegation** so a main plugin can call another plugin for an address, gateway, and routes. Our plugin will work with both the standard `static` and `host-local` IPAM plugins.
 
 ```mermaid
+%%{init: {'sequence': {'mirrorActors': false}}}%%
 sequenceDiagram
     participant R as containerd
     participant C as cni-plugin
