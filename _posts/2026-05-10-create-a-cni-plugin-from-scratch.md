@@ -557,6 +557,7 @@ cmd_add() {
 	trap 'ip link delete "$host_veth" 2>/dev/null || true' EXIT
 	ip link set "$peer" netns "$netns" || fail "could not move veth into $CNI_NETNS"
 	ip -n "$netns" link set "$peer" name "$CNI_IFNAME" || fail "could not rename Pod veth"
+	ip -n "$netns" link set "$CNI_IFNAME" mtu "$mtu" || fail "could not set Pod MTU"
 	ip link set "$host_veth" master "$bridge" up || fail "could not attach veth to $bridge"
 	ip -n "$netns" link set lo up
 	ip -n "$netns" link set "$CNI_IFNAME" up
