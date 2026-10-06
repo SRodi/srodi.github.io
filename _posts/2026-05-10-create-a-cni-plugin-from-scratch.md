@@ -68,6 +68,7 @@ The [CNI specification](https://www.cni.dev/docs/spec/) also requires repeated `
 Creating interfaces and allocating addresses are different jobs. The CNI specification defines **IPAM delegation** so a main plugin can call another plugin for an address, gateway, and routes. Our plugin will work with both the standard `static` and `host-local` IPAM plugins.
 
 ```mermaid
+%%{init: {'sequence': {'mirrorActors': false}}}%%
 sequenceDiagram
     participant R as containerd
     participant C as cni-plugin
@@ -557,6 +558,7 @@ cmd_add() {
 	trap 'ip link delete "$host_veth" 2>/dev/null || true' EXIT
 	ip link set "$peer" netns "$netns" || fail "could not move veth into $CNI_NETNS"
 	ip -n "$netns" link set "$peer" name "$CNI_IFNAME" || fail "could not rename Pod veth"
+	ip -n "$netns" link set "$CNI_IFNAME" mtu "$mtu" || fail "could not set Pod MTU"
 	ip link set "$host_veth" master "$bridge" up || fail "could not attach veth to $bridge"
 	ip -n "$netns" link set lo up
 	ip -n "$netns" link set "$CNI_IFNAME" up
