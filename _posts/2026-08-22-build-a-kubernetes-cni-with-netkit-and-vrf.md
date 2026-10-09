@@ -32,9 +32,10 @@ This follows two earlier posts:
   CNI](/posts/build-a-scalable-vxlan-overlay-for-a-kubernetes-cni/) added a
   node agent and cross-node reconciliation.
 
-The result here is deliberately educational. It does not implement network
-policy, encryption, Services, BGP, or a production-grade IPAM control plane.
-It does make the Pod datapath and its trade-offs visible.
+The result here is deliberately educational. It relies on kube-proxy for
+Services and does not implement network policy, encryption, BGP, or a
+production-grade IPAM control plane. It does make the Pod datapath and its
+trade-offs visible.
 
 > A precise CNI detail matters from the start: the container runtime creates
 > the Pod network namespace. It passes the namespace path to our plugin in
@@ -159,12 +160,12 @@ maps a destination prefix to an output device, a next hop, or an action.
 Linux chooses the most specific matching prefix:
 
 ```text
-10.244.1.2/32 dev nkh123...
-10.244.0.0/16 dev nk-vrf-x
-default         dev nk-vrf-x
+192.0.2.42/32 dev eth1
+192.0.2.0/24  via 198.51.100.1
+default       via 203.0.113.1
 ```
 
-For `10.244.1.2`, the `/32` wins over `/16` and the default route.
+For `192.0.2.42`, the `/32` wins over `/24` and the default route.
 
 Linux has multiple FIBs. Table `main` is the ordinary host routing table, but
 a **policy rule** can select another table before `main`:
@@ -217,9 +218,10 @@ separately.
 ### Route Leaking and Socket Scope
 
 **Route leaking** means installing controlled paths between routing domains.
-Our node-scoped transit netkit pair has one side in table `main` and one side
-under `nk-vrf`. Routes send packets over that pair without changing their IP
-addresses. That is different from NAT, which rewrites addresses.
+In this design, a lookup that finds no matching route in table 100 continues
+to the later `main` rule. Remote Pod CIDRs and ordinary destinations therefore
+use the main table without crossing another virtual device. That is different
+from NAT, which rewrites addresses.
 
 Linux also scopes sockets by VRF. A socket bound to `nk-vrf` naturally uses
 table 100. An unbound host socket, such as kubelet's TCP readiness prober,
@@ -243,7 +245,7 @@ The two technologies solve different problems:
   container-oriented, BPF-ready device;
 * **VRF** gives all Pod-facing host devices a dedicated, inspectable FIB;
 * **policy rules** direct local Pod destinations into that FIB;
-* **the transit pair** leaks cross-node and non-Pod traffic to table `main`;
+* **rule continuation** sends cross-node and non-Pod traffic to table `main`;
 * **ordinary node routes** carry Pod packets between kind nodes without an
   overlay or NAT.
 
@@ -266,56 +268,37 @@ The host-side primary is enslaved to `nk-vrf`. Linux automatically applies
 the VRF's routing table to packets received from that device. The CNI adds a
 `/32` route back to the Pod in table 100.
 
-The priority-500 rule handles destinations on the local node. Cross-node and
-non-Pod traffic still needs to move between the VRF and kind's node network.
-We make that boundary explicit with one more L3 netkit pair per node:
+The priority-500 rule handles destinations on the local node. Table 100 has no
+default route: when it does not contain a destination, policy evaluation
+continues to the main table.
 
 ```mermaid
-flowchart LR
-    subgraph D [Default routing domain]
-        H[nk-main<br>169.254.100.1/30]
-        U[eth0<br>kind node IP]
-    end
-    H <-->|node transit netkit| R[nk-vrf-x<br>169.254.100.2/30]
-    subgraph V [VRF nk-vrf - table 100]
-        R
-        P1[Pod netkit primaries]
-    end
-    H --> U
-    R --> P1
+flowchart TD
+    P[Packet from Pod netkit] --> N[netfilter and kube-proxy]
+    N --> V{table 100 has endpoint /32?}
+    V -->|yes| L[local Pod netkit]
+    V -->|no| M[main routing table]
+    M --> R[remote node or default route]
 ```
 
-This is **route leaking**, not NAT:
+The resulting route ownership is small:
 
-* table 100 sends the cluster Pod CIDR over `nk-vrf-x`;
-* table 100 also has a default route over `nk-vrf-x` for node-underlay
-  destinations such as the Kubernetes API;
-* a priority-500 destination rule sends the local Pod CIDR directly to table
-  100, avoiding the transit pair for host-to-Pod and same-node Pod traffic;
-* the main table sends the local node's Pod CIDR over `nk-main`;
+* table 100 contains a `/32` for every local Pod;
+* a priority-500 rule sends the local Pod CIDR to table 100;
 * the main table sends each remote Pod CIDR to that node's kind IP;
+* the main table handles other destinations with its normal routes;
 * no rule rewrites a Pod source address.
 
-The `/30` addresses make both transit endpoints visible to inspection. The
-cross-domain routes themselves are device routes: L3 netkit does not use ARP
-to resolve the address on the other end.
-
-The VRF default route deliberately leaks non-Pod destinations back to the main
-table. The VRF organizes routing here; without policy, it is not a security
-boundary.
+Each node also assigns `169.254.100.1/32` to `nk-vrf`. This node-local address
+gives host-originated connections, including kubelet probes, a valid source.
+It is reused on every node and is never routed between nodes.
 
 Linux also scopes sockets by VRF. The agent enables `tcp_l3mdev_accept` and
 `udp_l3mdev_accept` so unbound host services—including kubelet's TCP
 prober—can communicate with the Pod VRF. This is convenient for the lab, but
 the kernel documentation warns that socket selection is unspecified if
-identically bound VRF-aware and unbound services coexist.
-
-Using a shared transit pair adds a hop. It is not how Cilium implements its
-optimized BPF host-routing path. It is a useful teaching boundary: the VRF is
-real, both routing domains are visible, and no per-Pod veth remains.
-The local-PodCIDR rule keeps same-node and host-to-Pod traffic in table 100.
-Cross-node and non-Pod traffic use the explicit transit, keeping that boundary
-visible without adding unnecessary local hops.
+identically bound VRF-aware and unbound services coexist. The VRF organizes
+routing here; it is not a security boundary.
 
 ## Responsibilities: CNI Binary and Node Agent
 
@@ -361,9 +344,9 @@ datapath, so blackhole would correctly—and completely—stop traffic.
 A host-networked DaemonSet runs one agent on every node. It:
 
 1. reads Node Pod CIDRs and Internal IPs from the Kubernetes API;
-2. creates `nk-vrf` and its routing table;
-3. creates the node transit netkit pair;
-4. reconciles local and remote Pod CIDR routes and the priority-500 rule;
+2. creates `nk-vrf`, table 100, and its node-local source address;
+3. reconciles remote Pod CIDR routes and the priority-500 local rule;
+4. removes obsolete routes and transit links from older project versions;
 5. enables IPv4 forwarding and the required l3mdev socket sysctls;
 6. writes that node's CNI configuration atomically.
 
@@ -454,23 +437,12 @@ docker exec "$NODE" ip route show table 100
 The first VRF creation also installs the kernel's `l3mdev` rule. Pod `/32`
 routes appear in table 100 as Pods are created.
 
-Inspect the transit pair:
-
-```bash
-docker exec "$NODE" ip -details link show nk-main
-docker exec "$NODE" ip -details link show nk-vrf-x
-docker exec "$NODE" ip -4 address show dev nk-main
-docker exec "$NODE" ip -4 address show dev nk-vrf-x
-```
-
-Both links should report `netkit` and `mode l3`. `nk-vrf-x` should report
-`master nk-vrf`.
-
-Now list Pod devices:
+List Pod devices and remote routes:
 
 ```bash
 docker exec "$NODE" ip -details link show type netkit
 docker exec "$NODE" ip route show table 100
+docker exec "$NODE" ip route show table main proto 98
 ```
 
 The host names are hashes rather than Pod names. CNI receives a container
@@ -491,6 +463,8 @@ It creates test Pods pinned across the workers and verifies:
 * same-node Pod-to-Pod traffic;
 * cross-node traffic in both directions;
 * source addresses observed by the destination;
+* local and remote ClusterIP endpoints;
+* cluster DNS and a headless Service;
 * netkit device type and L3 mode;
 * VRF membership and expected routes.
 
@@ -509,12 +483,10 @@ For a cross-node packet from `netkit-a` to `netkit-c`, the path is:
 flowchart LR
     A[Pod A /32] --> NP[Pod netkit peer]
     NP --> VRF[VRF table 100]
-    VRF --> TV[node transit netkit]
-    TV --> MR[main routing table]
+    VRF -->|no local route| MR[main routing table]
     MR --> U[kind node network]
     U --> RM[remote main table]
-    RM --> RT[remote transit netkit]
-    RT --> RV[remote VRF]
+    RM --> RV[remote VRF table 100]
     RV --> C[Pod C /32]
 ```
 
@@ -537,10 +509,9 @@ The architectural advantages are still visible:
 * **Programmable failure policy.** A production datapath can blackhole a
   peer when its required BPF program is missing.
 
-Netkit alone does not remove our transit route, normal FIB lookups, netfilter
-hooks, or the cost of this deliberately explicit VRF design. Comparing this
-lab against a bridge CNI and attributing every difference to netkit would be
-misleading: the topologies are not equivalent.
+Netkit alone does not remove normal FIB lookups, policy rules, netfilter, or
+conntrack. Comparing this lab against a bridge CNI and attributing every
+difference to netkit would be misleading: the topologies are not equivalent.
 
 For a meaningful experiment, compare equivalent routed datapaths on the same
 kernel, CPU allocation, MTU, offload settings, and workload placement.
