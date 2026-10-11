@@ -22,7 +22,7 @@ that contract can drive.
 In this post, we will build a small CNI plugin in Go around **netkit**, the
 Linux network device introduced for container networking. We will use netkit
 in Layer 3 mode, put Pod-facing devices in a Linux VRF, route between three
-kind nodes without an overlay or NAT, and inspect every step.
+kind nodes without an overlay or Pod-to-Pod NAT, and inspect every step.
 
 This follows two earlier posts:
 
@@ -247,7 +247,7 @@ The two technologies solve different problems:
 * **policy rules** direct local Pod destinations into that FIB;
 * **rule continuation** sends cross-node and non-Pod traffic to table `main`;
 * **ordinary node routes** carry Pod packets between kind nodes without an
-  overlay or NAT.
+  overlay or Pod-to-Pod NAT.
 
 With those concepts in place, we can assemble the complete datapath.
 
@@ -348,7 +348,9 @@ A host-networked DaemonSet runs one agent on every node. It:
 3. reconciles remote Pod CIDR routes and the priority-500 local rule;
 4. removes obsolete routes and transit links from older project versions;
 5. enables IPv4 forwarding and the required l3mdev socket sysctls;
-6. writes that node's CNI configuration atomically.
+6. maintains a `NETKIT-CNI-EGRESS` iptables chain that keeps Pod-to-Pod
+   source addresses and masquerades other traffic from the local Pod CIDR;
+7. writes that node's CNI configuration atomically.
 
 Separating these jobs follows an important CNI design rule: `ADD` is on the
 Pod-creation latency path and should not become a miniature cluster
@@ -569,6 +571,10 @@ Do not deploy this project as a production cluster network. It omits:
 * encryption;
 * MTU discovery;
 * high-scale route aggregation;
+* assigning Pod CIDRs: clusters that leave `spec.podCIDR` empty, such as AKS
+  with bring-your-own CNI, need them set manually and need underlay routes
+  (see the repository README);
+* removal of the egress iptables chain on uninstall;
 * upgrades across mixed veth/netkit nodes;
 * garbage collection for every possible runtime crash sequence;
 * production hardening of the privileged node installer.
@@ -601,7 +607,7 @@ Our plugin remains small:
 * netkit connects the namespace;
 * a VRF selects the Pod FIB;
 * the node agent reconciles cross-node routes;
-* Linux forwards the original packet without NAT.
+* Linux forwards the original Pod-to-Pod packet without NAT.
 
 That is enough to understand the primitive. It is also enough to see why
 real CNIs add BPF policy, service translation, route distribution,
